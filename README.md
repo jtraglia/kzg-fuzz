@@ -6,7 +6,6 @@
 git submodule update --init --recursive
 cd c-kzg-4844/src
 make blst
-make
 ```
 
 ## Fuzzing
