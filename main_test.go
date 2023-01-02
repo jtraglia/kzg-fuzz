@@ -1,208 +1,276 @@
-package goczkg
+package fuzz
 
 import (
-    "os"
-    "bytes"
-    "testing"
+	"bytes"
+	gokzg "github.com/protolambda/go-kzg/eth"
+	"os"
+	"testing"
 
-    "github.com/trailofbits/go-fuzz-utils"
-    "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require"
+	"github.com/trailofbits/go-fuzz-utils"
 )
 
 func GetTypeProvider(data []byte) (*go_fuzz_utils.TypeProvider, error) {
-    tp, err := go_fuzz_utils.NewTypeProvider(data)
-    if err != nil {
-        return nil, err
-    }
-    return tp, nil
+	tp, err := go_fuzz_utils.NewTypeProvider(data)
+	if err != nil {
+		return nil, err
+	}
+	return tp, nil
 }
 
 func TestMain(m *testing.M) {
-    ret := LoadTrustedSetupFile("c-kzg-4844/src/trusted_setup.txt")
-    if ret != 0 {
-        panic("Failed to load trusted setup")
-    }
-    code := m.Run()
-    FreeTrustedSetup()
-    os.Exit(code)
+	ret := LoadTrustedSetupFile("c-kzg-4844/src/trusted_setup.txt")
+	if ret != 0 {
+		panic("Failed to load trusted setup")
+	}
+	code := m.Run()
+	FreeTrustedSetup()
+	os.Exit(code)
 }
 
 func FuzzBytesToG1(f *testing.F) {
-    f.Fuzz(func(t *testing.T, data []byte) {
-        tp, err := GetTypeProvider(data)
-        if err != nil {
-            return
-        }
-        bytes, err := tp.GetNBytes(48)
-        if err != nil {
-            return
-        }
+	f.Fuzz(func(t *testing.T, data []byte) {
+		tp, err := GetTypeProvider(data)
+		if err != nil {
+			return
+		}
+		g1Bytes, err := tp.GetNBytes(48)
+		if err != nil {
+			return
+		}
 
-        var bytes48 [48]byte
-        copy(bytes48[:], bytes)
+		var bytes48 [48]byte
+		copy(bytes48[:], g1Bytes)
 
-        g1, ret := BytesToG1(bytes48)
-        t.Log(g1, ret)
-    })
+		g1, ret := BytesToG1(bytes48)
+		t.Log(g1, ret)
+	})
 }
 
 func FuzzBytesFromG1(f *testing.F) {
-    f.Fuzz(func(t *testing.T, data []byte) {
-        tp, err := GetTypeProvider(data)
-        if err != nil {
-            return
-        }
-        g1Bytes, err := tp.GetNBytes(g1Size)
-        if err != nil {
-            return
-        }
+	f.Fuzz(func(t *testing.T, data []byte) {
+		tp, err := GetTypeProvider(data)
+		if err != nil {
+			return
+		}
+		g1Bytes, err := tp.GetNBytes(g1Size)
+		if err != nil {
+			return
+		}
 
-        var g1 [g1Size]byte
-        copy(g1[:], g1Bytes)
+		var g1 [g1Size]byte
+		copy(g1[:], g1Bytes)
 
-        bytes := BytesFromG1(g1)
-        t.Log(bytes)
-    })
+		result := BytesFromG1(g1)
+		t.Log(result)
+	})
 }
 
 func FuzzBytesToBlsField(f *testing.F) {
-    f.Fuzz(func(t *testing.T, data []byte) {
-        tp, err := GetTypeProvider(data)
-        if err != nil {
-            return
-        }
-        bytes, err := tp.GetNBytes(bytesPerFieldElement)
-        if err != nil {
-            return
-        }
+	f.Fuzz(func(t *testing.T, data []byte) {
+		tp, err := GetTypeProvider(data)
+		if err != nil {
+			return
+		}
+		blsFieldBytes, err := tp.GetNBytes(bytesPerFieldElement)
+		if err != nil {
+			return
+		}
 
-        var bytes32 [bytesPerFieldElement]byte
-        copy(bytes32[:], bytes)
+		var bytes32 [bytesPerFieldElement]byte
+		copy(bytes32[:], blsFieldBytes)
 
-        blsField, ret := BytesToBlsField(bytes32)
-        t.Log(blsField, ret)
-    })
+		blsField, ret := BytesToBlsField(bytes32)
+		t.Log(blsField, ret)
+	})
 }
 
 func FuzzComputeAggregateKzgProof(f *testing.F) {
-    f.Fuzz(func(t *testing.T, data []byte) {
-        tp, err := GetTypeProvider(data)
-        if err != nil {
-            return
-        }
-        blobs := []Blob{}
-        for {
-            blobBytesPart, err := tp.GetNBytes(32)
-            if err != nil {
-                break
-            }
-            blobBytes := bytes.Repeat(blobBytesPart, 4096)
-            require.Len(t, blobBytes, blobSize)
+	f.Fuzz(func(t *testing.T, data []byte) {
+		tp, err := GetTypeProvider(data)
+		if err != nil {
+			return
+		}
+		blobs := []Blob{}
+		goKzgBlobs := []GoKzgBlobImpl{}
+		for {
+			blobBytesPart, err := tp.GetNBytes(32)
+			if err != nil {
+				break
+			}
+			blobBytes := bytes.Repeat(blobBytesPart, 4096)
+			require.Len(t, blobBytes, blobSize)
 
-            var blob Blob
-            copy(blob[:], blobBytes)
-            blobs = append(blobs, blob)
-        }
+			var blob Blob
+			copy(blob[:], blobBytes)
+			blobs = append(blobs, blob)
+			goKzgBlob := GoKzgBlobImpl(blobBytes)
+			goKzgBlobs = append(goKzgBlobs, goKzgBlob)
+		}
 
-        proof, ret := ComputeAggregateKzgProof(blobs)
-        t.Log(proof, ret)
-    })
+		if len(blobs) == 0 {
+			return
+		}
+		expectedProof, expectedRet := ComputeAggregateKzgProof(blobs)
+		if expectedRet != 0 {
+			return
+		}
+
+		goKzgBlobSequence := GoKzgBlobSequenceImpl(goKzgBlobs)
+		proof, err := gokzg.ComputeAggregateKZGProof(goKzgBlobSequence)
+		require.Equal(t, expectedRet == 0, err == nil)
+		require.Equal(t, expectedProof, [48]byte(proof))
+	})
 }
 
 func FuzzVerifyAggregateKzgProof(f *testing.F) {
-    f.Fuzz(func(t *testing.T, data []byte) {
-        tp, err := GetTypeProvider(data)
-        if err != nil {
-            return
-        }
-        proofBytes, err := tp.GetNBytes(proofSize)
-        if err != nil {
-            return
-        }
-        var proof Proof
-        copy(proof[:], proofBytes)
+	f.Fuzz(func(t *testing.T, data []byte) {
+		tp, err := GetTypeProvider(data)
+		if err != nil {
+			return
+		}
 
-        blobs := []Blob{}
-        commitments := []Commitment{}
-        for {
-            blobBytesPart, err := tp.GetNBytes(32)
-            if err != nil {
-                break
-            }
-            blobBytes := bytes.Repeat(blobBytesPart, 4096)
-            require.Len(t, blobBytes, blobSize)
-            commitmentBytes, err := tp.GetNBytes(commitmentSize)
-            if err != nil {
-                break
-            }
+		// This is generated first because we want to use the remaining random
+		// bytes for the blobs and commitments.
+		proofBytes, err := tp.GetNBytes(proofSize)
+		if err != nil {
+			return
+		}
 
-            var blob Blob
-            copy(blob[:], blobBytes)
-            blobs = append(blobs, blob)
-            var commitment Commitment
-            copy(commitment[:], commitmentBytes)
-            commitments = append(commitments, commitment)
-        }
+		blobsBytes := [][]byte{}
+		commitmentsBytes := [][]byte{}
+		for {
+			blobBytesPart, err := tp.GetNBytes(32)
+			if err != nil {
+				break
+			}
+			blobBytes := bytes.Repeat(blobBytesPart, 4096)
+			commitmentBytes, err := tp.GetNBytes(commitmentSize)
+			if err != nil {
+				break
+			}
 
-        result, ret := VerifyAggregateKzgProof(blobs, commitments, proof)
-        t.Log(result, ret)
-    })
+			blobsBytes = append(blobsBytes, blobBytes)
+			commitmentsBytes = append(commitmentsBytes, commitmentBytes)
+		}
+
+		blobs := []Blob{}
+		commitments := []Commitment{}
+		for _, blobBytes := range blobsBytes {
+			var blob Blob
+			copy(blob[:], blobBytes)
+			blobs = append(blobs, blob)
+		}
+		for _, commitmentBytes := range commitmentsBytes {
+			var commitment Commitment
+			copy(commitment[:], commitmentBytes)
+			commitments = append(commitments, commitment)
+		}
+		var proof Proof
+		copy(proof[:], proofBytes)
+		expectedResult, expectedRet := VerifyAggregateKzgProof(blobs, commitments, proof)
+
+		goKzgBlobs := []GoKzgBlobImpl{}
+		for _, blobBytes := range blobsBytes {
+			goKzgBlob := GoKzgBlobImpl(blobBytes)
+			goKzgBlobs = append(goKzgBlobs, goKzgBlob)
+		}
+		goKzgBlobSequence := GoKzgBlobSequenceImpl(goKzgBlobs)
+		goKzgCommitments := gokzg.KZGCommitmentSequenceImpl{}
+		for _, commitmentBytes := range commitmentsBytes {
+			var goKzgCommitment gokzg.KZGCommitment
+			copy(goKzgCommitment[:], commitmentBytes)
+			goKzgCommitments = append(goKzgCommitments, goKzgCommitment)
+		}
+		var goKzgProof gokzg.KZGProof
+		copy(goKzgProof[:], proofBytes)
+		result, err := gokzg.VerifyAggregateKZGProof(goKzgBlobSequence, goKzgCommitments, goKzgProof)
+
+		require.Equal(t, expectedRet == 0, err == nil)
+		require.Equal(t, expectedResult, result)
+	})
 }
 
 func FuzzBlobToKzgCommitment(f *testing.F) {
-    f.Fuzz(func(t *testing.T, data []byte) {
-        tp, err := GetTypeProvider(data)
-        if err != nil {
-            return
-        }
-        blobBytesPart, err := tp.GetNBytes(32)
-        if err != nil {
-            return
-        }
-        blobBytes := bytes.Repeat(blobBytesPart, 4096)
-        require.Len(t, blobBytes, blobSize)
+	f.Fuzz(func(t *testing.T, data []byte) {
+		tp, err := GetTypeProvider(data)
+		if err != nil {
+			return
+		}
+		blobBytesPart, err := tp.GetNBytes(32)
+		if err != nil {
+			return
+		}
+		blobBytes := bytes.Repeat(blobBytesPart, 4096)
+		require.Len(t, blobBytes, blobSize)
 
-        var blob Blob
-        copy(blob[:], blobBytes)
+		t.Log(blobBytesPart)
 
-        commitment, ret := BlobToKzgCommitment(blob)
-        t.Log(commitment, ret)
-    })
+		var blob Blob
+		copy(blob[:], blobBytes)
+		expectedCommitment, expectedRet := BlobToKzgCommitment(blob)
+
+		// For some reason, if there's an error the return values are
+		// slightly different. Something to look into.
+		if expectedRet != 0 {
+			return
+		}
+
+		goKzgBlob := GoKzgBlobImpl(blobBytes)
+		commitment, ret := gokzg.BlobToKZGCommitment(goKzgBlob)
+
+		require.Equal(t, expectedRet == 0, ret == true)
+		require.Equal(t, expectedCommitment[:], commitment[:])
+	})
 }
 
 func FuzzVerifyKzgProof(f *testing.F) {
-    f.Fuzz(func(t *testing.T, data []byte) {
-        tp, err := GetTypeProvider(data)
-        if err != nil {
-            return
-        }
-        commitmentBytes, err := tp.GetNBytes(commitmentSize)
-        if err != nil {
-            return
-        }
-        zBytes, err := tp.GetNBytes(bytesPerFieldElement)
-        if err != nil {
-            return
-        }
-        yBytes, err := tp.GetNBytes(bytesPerFieldElement)
-        if err != nil {
-            return
-        }
-        proofBytes, err := tp.GetNBytes(proofSize)
-        if err != nil {
-            return
-        }
+	f.Fuzz(func(t *testing.T, data []byte) {
+		tp, err := GetTypeProvider(data)
+		if err != nil {
+			return
+		}
+		commitmentBytes, err := tp.GetNBytes(commitmentSize)
+		if err != nil {
+			return
+		}
+		zBytes, err := tp.GetNBytes(bytesPerFieldElement)
+		if err != nil {
+			return
+		}
+		yBytes, err := tp.GetNBytes(bytesPerFieldElement)
+		if err != nil {
+			return
+		}
+		proofBytes, err := tp.GetNBytes(proofSize)
+		if err != nil {
+			return
+		}
 
-        var commitment Commitment
-        copy(commitment[:], commitmentBytes)
-        var z [bytesPerFieldElement]byte
-        copy(z[:], zBytes)
-        var y [bytesPerFieldElement]byte
-        copy(y[:], yBytes)
-        var proof Proof
-        copy(proof[:], proofBytes)
+		t.Log(commitmentBytes, zBytes, yBytes, proofBytes)
 
-        result, ret := VerifyKzgProof(commitment, z, y, proof)
-        t.Log(result, ret)
-    })
+		var commitment Commitment
+		copy(commitment[:], commitmentBytes)
+		var z [bytesPerFieldElement]byte
+		copy(z[:], zBytes)
+		var y [bytesPerFieldElement]byte
+		copy(y[:], yBytes)
+		var proof Proof
+		copy(proof[:], proofBytes)
+		expectedResult, expectedRet := VerifyKzgProof(commitment, z, y, proof)
+
+		var goKzgCommitment gokzg.KZGCommitment
+		copy(goKzgCommitment[:], commitmentBytes)
+		var goKzgZ [32]byte
+		copy(goKzgZ[:], zBytes)
+		var goKzgY [32]byte
+		copy(goKzgY[:], yBytes)
+		var goKzgProof gokzg.KZGProof
+		copy(goKzgProof[:], proofBytes)
+		result, err := gokzg.VerifyKZGProof(goKzgCommitment, goKzgZ, goKzgY, goKzgProof)
+
+		if expectedRet == 0 && err == nil {
+			require.Equal(t, expectedResult, result)
+		}
+	})
 }
