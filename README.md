@@ -1,18 +1,21 @@
 # KZG Fuzz
 
+⚠️ work in progress ⚠️
+
+This uses [Cgo](https://go.dev/blog/cgo) (which lets Go packages call C code)
+and [Go Fuzzing](https://go.dev/security/fuzz/) (Go's built in fuzzing tool) to
+fuzz the exported KZG functions.
+
 ## Prerequisites
 
 ```
 git submodule update --init --recursive
 cd c-kzg-4844/src
 make blst
+cd ../..
 ```
 
 ## Fuzzing
-
-This uses [Cgo](https://go.dev/blog/cgo) (which lets Go packages call C code)
-and [Go Fuzzing](https://go.dev/security/fuzz/) (Go's built in fuzzing tool) to
-fuzz the exported KZG functions.
 
 ### `bytes_to_g1`
 ```
