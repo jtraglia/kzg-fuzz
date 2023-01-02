@@ -152,7 +152,7 @@ func ComputeAggregateKzgProof(blobs []Blob) ([48]byte, C.C_KZG_RET) {
 	proof := [48]byte{}
 	ret := C.compute_aggregate_kzg_proof(
 		(*C.KZGProof)(unsafe.Pointer(&proof)),
-		(*C.Blob)(unsafe.Pointer(&blobs)),
+		*(**C.Blob)(unsafe.Pointer(&blobs)),
 		(C.size_t)(len(blobs)),
 		&settings)
 	return proof, ret
@@ -176,8 +176,8 @@ func VerifyAggregateKzgProof(blobs []Blob, commitments []Commitment, proof Proof
 	var result C.bool
 	ret := C.verify_aggregate_kzg_proof(
 		&result,
-		(*C.Blob)(unsafe.Pointer(&blobs)),
-		(*C.KZGCommitment)(unsafe.Pointer(&commitments)),
+		*(**C.Blob)(unsafe.Pointer(&blobs)),
+		*(**C.KZGCommitment)(unsafe.Pointer(&commitments)),
 		(C.size_t)(len(blobs)),
 		(*C.KZGProof)(unsafe.Pointer(&proof)),
 		&settings)
