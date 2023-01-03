@@ -93,13 +93,13 @@ func FuzzComputeAggregateKzgProof(f *testing.F) {
 		}
 		blobs := []Blob{}
 		goKzgBlobs := []GoKzgBlobImpl{}
-		for {
+		for i := 0; i < 5; i++ {
 			blobBytesPart, err := tp.GetNBytes(32)
 			if err != nil {
 				break
 			}
+			t.Logf("Blob #%v: %v\n", i, blobBytesPart)
 			blobBytes := bytes.Repeat(blobBytesPart, 4096)
-			require.Len(t, blobBytes, blobSize)
 
 			var blob Blob
 			copy(blob[:], blobBytes)
@@ -108,18 +108,18 @@ func FuzzComputeAggregateKzgProof(f *testing.F) {
 			goKzgBlobs = append(goKzgBlobs, goKzgBlob)
 		}
 
-		if len(blobs) == 0 {
-			return
-		}
 		expectedProof, expectedRet := ComputeAggregateKzgProof(blobs)
-		if expectedRet != 0 {
-			return
-		}
-
 		goKzgBlobSequence := GoKzgBlobSequenceImpl(goKzgBlobs)
 		proof, err := gokzg.ComputeAggregateKZGProof(goKzgBlobSequence)
 		require.Equal(t, expectedRet == 0, err == nil)
-		require.Equal(t, expectedProof, [48]byte(proof))
+
+		// If there's an error, gokzg will return all zeros whereas ckzg will
+		// return the identity point. This is because gokzg returns the
+		// compressed point and ckzg returns the uncompressed point which we
+		// then compress.
+		if expectedRet == 0 && err == nil {
+			require.Equal(t, expectedProof[:], proof[:])
+		}
 	})
 }
 

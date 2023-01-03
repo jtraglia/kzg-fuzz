@@ -149,13 +149,13 @@ ComputeAggregateKzgProof is the binding for:
 	    const KZGSettings *s);
 */
 func ComputeAggregateKzgProof(blobs []Blob) ([48]byte, C.C_KZG_RET) {
-	proof := [48]byte{}
+	proof := [proofSize]byte{}
 	ret := C.compute_aggregate_kzg_proof(
 		(*C.KZGProof)(unsafe.Pointer(&proof)),
 		*(**C.Blob)(unsafe.Pointer(&blobs)),
 		(C.size_t)(len(blobs)),
 		&settings)
-	return proof, ret
+	return BytesFromG1(proof), ret
 }
 
 /*
