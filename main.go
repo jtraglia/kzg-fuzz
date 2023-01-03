@@ -193,7 +193,7 @@ BlobToKzgCommitment is the binding for:
 	    const KZGSettings *s);
 */
 func BlobToKzgCommitment(blob Blob) ([48]byte, C.C_KZG_RET) {
-	commitment := Commitment{}
+	commitment := [commitmentSize]byte{}
 	ret := C.blob_to_kzg_commitment(
 		(*C.KZGCommitment)(unsafe.Pointer(&commitment)),
 		(*C.uint8_t)(unsafe.Pointer(&blob)),

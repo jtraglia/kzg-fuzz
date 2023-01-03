@@ -210,17 +210,13 @@ func FuzzBlobToKzgCommitment(f *testing.F) {
 		copy(blob[:], blobBytes)
 		expectedCommitment, expectedRet := BlobToKzgCommitment(blob)
 
-		// For some reason, if there's an error the return values are
-		// slightly different. Something to look into.
-		if expectedRet != 0 {
-			return
-		}
-
 		goKzgBlob := GoKzgBlobImpl(blobBytes)
 		commitment, ret := gokzg.BlobToKZGCommitment(goKzgBlob)
 
 		require.Equal(t, expectedRet == 0, ret == true)
-		require.Equal(t, expectedCommitment[:], commitment[:])
+		if expectedRet == 0 && ret == true {
+			require.Equal(t, expectedCommitment[:], commitment[:])
+		}
 	})
 }
 
