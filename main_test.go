@@ -6,7 +6,11 @@ import (
     "testing"
 
     "github.com/stretchr/testify/require"
+    "bytes"
 )
+
+var IdentityPoint = [48]byte{192}
+var BlobAllZero = [blobSize]byte{}
 
 func TestMain(m *testing.M) {
     ret := LoadTrustedSetupFile("c-kzg-4844/src/trusted_setup.txt")
@@ -93,13 +97,20 @@ func FuzzComputeAggregateKzgProof(f *testing.F) {
         expectedProof, expectedRet := ComputeAggregateKzgProof(blobs)
         proof, err := gokzg.ComputeAggregateKZGProof(goKzgBlobs)
 
-        // If there's an error, gokzg will return all zeros whereas ckzg will
-        // return the identity point. This is because gokzg returns the
-        // compressed point and ckzg returns the uncompressed point which we
-        // then compress.
         require.Equal(t, expectedRet == 0, err == nil)
         if expectedRet == 0 && err == nil {
             require.Equal(t, expectedProof[:], proof[:])
+            emptyOrAllZero := true
+            for i, blob := range blobs {
+                if !bytes.Equal(blob[:], BlobAllZero[:]) {
+                    t.Logf("Blob #%v: %v * 4096\n", i, blob[:32])
+                    emptyOrAllZero = false
+                    break
+                }
+            }
+            if !emptyOrAllZero {
+                require.NotEqual(t, expectedProof, IdentityPoint)
+            }
         }
     })
 }
