@@ -3,6 +3,7 @@ module fuzz
 go 1.18
 
 require (
+	github.com/jtraglia/bls12-381 v0.0.0-20230104182256-87e54f9d9861
 	github.com/protolambda/go-kzg v0.0.0-20221224134646-c91cee5e954e
 	github.com/trailofbits/go-fuzz-utils v0.0.0-20210901195358-9657fcfd256c
 )
@@ -11,7 +12,7 @@ require (
 	github.com/herumi/bls-eth-go-binary v1.28.1 // indirect
 	github.com/holiman/uint256 v1.2.1 // indirect
 	github.com/kilic/bls12-381 v0.1.1-0.20220929213557-ca162e8a70f4 // indirect
-	golang.org/x/sys v0.0.0-20220818161305-2296e01440c6 // indirect
+	golang.org/x/sys v0.4.0 // indirect
 )
 
 require (
