@@ -3,6 +3,8 @@ package fuzz
 import (
     bls12381 "github.com/jtraglia/bls12-381"
     go_fuzz_utils "github.com/trailofbits/go-fuzz-utils"
+    "bytes"
+    gokzg "github.com/protolambda/go-kzg/eth"
 )
 
 func GetTypeProvider(data []byte) (*go_fuzz_utils.TypeProvider, error) {
@@ -11,6 +13,22 @@ func GetTypeProvider(data []byte) (*go_fuzz_utils.TypeProvider, error) {
         return nil, err
     }
     return tp, nil
+}
+
+func GetRandBlob(data []byte) (Blob, bool) {
+    tp, err := go_fuzz_utils.NewTypeProvider(data)
+    if err != nil {
+        return Blob{}, false
+    }
+    blobBytesPart, err := tp.GetNBytes(32)
+    if err != nil {
+        return Blob{}, false
+    }
+    blobBytes := bytes.Repeat(blobBytesPart, 4096)
+
+    var blob Blob
+    copy(blob[:], blobBytes)
+    return blob, true
 }
 
 func GetRandG1(data []byte) ([]byte, []byte, bool) {
@@ -51,22 +69,26 @@ func GetRandG1(data []byte) ([]byte, []byte, bool) {
     return compressedBytes, uncompressedBytes[:], true
 }
 
-func GetRandCommitment(data []byte) ([]byte, Commitment, bool) {
-    compressed, uncompressed, success := GetRandG1(data)
-    if success == false {
-        return []byte{}, Commitment{}, false
+func GetRandCommitment(data []byte) (gokzg.KZGCommitment, Commitment, bool) {
+    compressed, uncompressed, ok := GetRandG1(data)
+    if !ok {
+        return gokzg.KZGCommitment{}, Commitment{}, false
     }
-    var commitment Commitment
-    copy(commitment[:], uncompressed)
-    return compressed, commitment, true
+    var compressedCommitment gokzg.KZGCommitment
+    copy(compressedCommitment[:], compressed)
+    var uncompressedCommitment Commitment
+    copy(uncompressedCommitment[:], uncompressed)
+    return compressedCommitment, uncompressedCommitment, true
 }
 
-func GetRandProof(data []byte) ([]byte, Proof, bool) {
-    compressed, uncompressed, success := GetRandG1(data)
-    if success == false {
-        return []byte{}, Proof{}, false
+func GetRandProof(data []byte) (gokzg.KZGProof, Proof, bool) {
+    compressed, uncompressed, ok := GetRandG1(data)
+    if !ok {
+        return gokzg.KZGProof{}, Proof{}, false
     }
-    var proof Proof
-    copy(proof[:], uncompressed)
-    return compressed, proof, true
+    var compressedProof gokzg.KZGProof
+    copy(compressedProof[:], compressed)
+    var uncompressedProof Proof
+    copy(uncompressedProof[:], uncompressed)
+    return compressedProof, uncompressedProof, true
 }

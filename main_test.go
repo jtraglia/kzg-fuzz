@@ -1,7 +1,6 @@
 package fuzz
 
 import (
-    "bytes"
     gokzg "github.com/protolambda/go-kzg/eth"
     "os"
     "testing"
@@ -23,11 +22,11 @@ func FuzzBytesToG1(f *testing.F) {
     f.Fuzz(func(t *testing.T, data []byte) {
         tp, err := GetTypeProvider(data)
         if err != nil {
-            return
+            t.SkipNow()
         }
         g1Bytes, err := tp.GetNBytes(48)
         if err != nil {
-            return
+            t.SkipNow()
         }
 
         var bytes48 [48]byte
@@ -42,11 +41,11 @@ func FuzzBytesFromG1(f *testing.F) {
     f.Fuzz(func(t *testing.T, data []byte) {
         tp, err := GetTypeProvider(data)
         if err != nil {
-            return
+            t.SkipNow()
         }
         g1Bytes, err := tp.GetNBytes(g1Size)
         if err != nil {
-            return
+            t.SkipNow()
         }
 
         var g1 [g1Size]byte
@@ -61,11 +60,11 @@ func FuzzBytesToBlsField(f *testing.F) {
     f.Fuzz(func(t *testing.T, data []byte) {
         tp, err := GetTypeProvider(data)
         if err != nil {
-            return
+            t.SkipNow()
         }
         blsFieldBytes, err := tp.GetNBytes(bytesPerFieldElement)
         if err != nil {
-            return
+            t.SkipNow()
         }
 
         var bytes32 [bytesPerFieldElement]byte
@@ -78,36 +77,27 @@ func FuzzBytesToBlsField(f *testing.F) {
 
 func FuzzComputeAggregateKzgProof(f *testing.F) {
     f.Fuzz(func(t *testing.T, data []byte) {
-        tp, err := GetTypeProvider(data)
-        if err != nil {
-            return
-        }
         blobs := []Blob{}
-        goKzgBlobs := []GoKzgBlobImpl{}
+        goKzgBlobs := GoKzgBlobSequenceImpl{}
         for i := 0; i < 5; i++ {
-            blobBytesPart, err := tp.GetNBytes(32)
-            if err != nil {
+            blob, ok := GetRandBlob(data)
+            if !ok {
                 break
             }
-            t.Logf("Blob #%v: %v\n", i, blobBytesPart)
-            blobBytes := bytes.Repeat(blobBytesPart, 4096)
 
-            var blob Blob
-            copy(blob[:], blobBytes)
             blobs = append(blobs, blob)
-            goKzgBlob := GoKzgBlobImpl(blobBytes)
+            goKzgBlob := GoKzgBlobImpl(blob[:])
             goKzgBlobs = append(goKzgBlobs, goKzgBlob)
         }
 
         expectedProof, expectedRet := ComputeAggregateKzgProof(blobs)
-        goKzgBlobSequence := GoKzgBlobSequenceImpl(goKzgBlobs)
-        proof, err := gokzg.ComputeAggregateKZGProof(goKzgBlobSequence)
-        require.Equal(t, expectedRet == 0, err == nil)
+        proof, err := gokzg.ComputeAggregateKZGProof(goKzgBlobs)
 
         // If there's an error, gokzg will return all zeros whereas ckzg will
         // return the identity point. This is because gokzg returns the
         // compressed point and ckzg returns the uncompressed point which we
         // then compress.
+        require.Equal(t, expectedRet == 0, err == nil)
         if expectedRet == 0 && err == nil {
             require.Equal(t, expectedProof[:], proof[:])
         }
@@ -116,67 +106,37 @@ func FuzzComputeAggregateKzgProof(f *testing.F) {
 
 func FuzzVerifyAggregateKzgProof(f *testing.F) {
     f.Fuzz(func(t *testing.T, data []byte) {
-        tp, err := GetTypeProvider(data)
-        if err != nil {
-            return
-        }
-
-        // This is generated first because we want to use the remaining random
-        // bytes for the blobs and commitments.
-        proofBytes, err := tp.GetNBytes(proofSize)
-        if err != nil {
-            return
-        }
-
-        blobsBytes := [][]byte{}
-        commitmentsBytes := [][]byte{}
-        for {
-            blobBytesPart, err := tp.GetNBytes(32)
-            if err != nil {
-                break
-            }
-            blobBytes := bytes.Repeat(blobBytesPart, 4096)
-            commitmentBytes, err := tp.GetNBytes(commitmentSize)
-            if err != nil {
-                break
-            }
-
-            blobsBytes = append(blobsBytes, blobBytes)
-            commitmentsBytes = append(commitmentsBytes, commitmentBytes)
+        compressedProof, uncompressedProof, ok := GetRandProof(data)
+        if !ok {
+            t.SkipNow()
         }
 
         blobs := []Blob{}
-        commitments := []Commitment{}
-        for _, blobBytes := range blobsBytes {
-            var blob Blob
-            copy(blob[:], blobBytes)
+        goKzgBlobs := GoKzgBlobSequenceImpl{}
+        compressedCommitments := gokzg.KZGCommitmentSequenceImpl{}
+        uncompressedCommitments := []Commitment{}
+
+        for i := 0; i < 5; i++ {
+            blob, ok := GetRandBlob(data)
+            if !ok {
+                break
+            }
+            compressedCommitment, uncompressedCommitment, ok := GetRandCommitment(data)
+            if !ok {
+                break
+            }
+
             blobs = append(blobs, blob)
-        }
-        for _, commitmentBytes := range commitmentsBytes {
-            var commitment Commitment
-            copy(commitment[:], commitmentBytes)
-            commitments = append(commitments, commitment)
-        }
-        var proof Proof
-        copy(proof[:], proofBytes)
-        expectedResult, expectedRet := VerifyAggregateKzgProof(blobs, commitments, proof)
-
-        goKzgBlobs := []GoKzgBlobImpl{}
-        for _, blobBytes := range blobsBytes {
-            goKzgBlob := GoKzgBlobImpl(blobBytes)
+            goKzgBlob := GoKzgBlobImpl(blob[:])
             goKzgBlobs = append(goKzgBlobs, goKzgBlob)
+            compressedCommitments = append(compressedCommitments, compressedCommitment)
+            uncompressedCommitments = append(uncompressedCommitments, uncompressedCommitment)
         }
-        goKzgBlobSequence := GoKzgBlobSequenceImpl(goKzgBlobs)
-        goKzgCommitments := gokzg.KZGCommitmentSequenceImpl{}
-        for _, commitmentBytes := range commitmentsBytes {
-            var goKzgCommitment gokzg.KZGCommitment
-            copy(goKzgCommitment[:], commitmentBytes)
-            goKzgCommitments = append(goKzgCommitments, goKzgCommitment)
-        }
-        var goKzgProof gokzg.KZGProof
-        copy(goKzgProof[:], proofBytes)
-        result, err := gokzg.VerifyAggregateKZGProof(goKzgBlobSequence, goKzgCommitments, goKzgProof)
 
+        expectedResult, expectedRet := VerifyAggregateKzgProof(blobs, uncompressedCommitments, uncompressedProof)
+        result, err := gokzg.VerifyAggregateKZGProof(goKzgBlobs, compressedCommitments, compressedProof)
+
+        t.Log(err)
         require.Equal(t, expectedRet == 0, err == nil)
         require.Equal(t, expectedResult, result)
     })
@@ -184,24 +144,13 @@ func FuzzVerifyAggregateKzgProof(f *testing.F) {
 
 func FuzzBlobToKzgCommitment(f *testing.F) {
     f.Fuzz(func(t *testing.T, data []byte) {
-        tp, err := GetTypeProvider(data)
-        if err != nil {
-            return
+        blob, ok := GetRandBlob(data)
+        if !ok {
+            t.SkipNow()
         }
-        blobBytesPart, err := tp.GetNBytes(32)
-        if err != nil {
-            return
-        }
-        blobBytes := bytes.Repeat(blobBytesPart, 4096)
-        require.Len(t, blobBytes, blobSize)
 
-        t.Log(blobBytesPart)
-
-        var blob Blob
-        copy(blob[:], blobBytes)
+        goKzgBlob := GoKzgBlobImpl(blob[:])
         expectedCommitment, expectedRet := BlobToKzgCommitment(blob)
-
-        goKzgBlob := GoKzgBlobImpl(blobBytes)
         commitment, ret := gokzg.BlobToKZGCommitment(goKzgBlob)
 
         require.Equal(t, expectedRet == 0, ret == true)
@@ -213,26 +162,26 @@ func FuzzBlobToKzgCommitment(f *testing.F) {
 
 func FuzzVerifyKzgProof(f *testing.F) {
     f.Fuzz(func(t *testing.T, data []byte) {
-        compressedCommitment, uncompressedCommitment, success := GetRandCommitment(data)
-        if success == false {
-            return
+        compressedCommitment, uncompressedCommitment, ok := GetRandCommitment(data)
+        if !ok {
+            t.SkipNow()
         }
-        compressedProof, uncompressedProof, success := GetRandProof(data)
-        if success == false {
-            return
+        compressedProof, uncompressedProof, ok := GetRandProof(data)
+        if !ok {
+            t.SkipNow()
         }
 
         tp, err := GetTypeProvider(data)
         if err != nil {
-            return
+            t.SkipNow()
         }
         zBytes, err := tp.GetNBytes(bytesPerFieldElement)
         if err != nil {
-            return
+            t.SkipNow()
         }
         yBytes, err := tp.GetNBytes(bytesPerFieldElement)
         if err != nil {
-            return
+            t.SkipNow()
         }
 
         var z [bytesPerFieldElement]byte
@@ -241,15 +190,11 @@ func FuzzVerifyKzgProof(f *testing.F) {
         copy(y[:], yBytes)
         expectedResult, expectedRet := VerifyKzgProof(uncompressedCommitment, z, y, uncompressedProof)
 
-        var goKzgCommitment gokzg.KZGCommitment
-        copy(goKzgCommitment[:], compressedCommitment)
         var goKzgZ [32]byte
         copy(goKzgZ[:], zBytes)
         var goKzgY [32]byte
         copy(goKzgY[:], yBytes)
-        var goKzgProof gokzg.KZGProof
-        copy(goKzgProof[:], compressedProof)
-        result, err := gokzg.VerifyKZGProof(goKzgCommitment, goKzgZ, goKzgY, goKzgProof)
+        result, err := gokzg.VerifyKZGProof(compressedCommitment, goKzgZ, goKzgY, compressedProof)
 
         t.Log(err)
         require.Equal(t, expectedRet == 0, err == nil)

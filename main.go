@@ -169,7 +169,7 @@ VerifyAggregateKzgProof is the binding for:
 	    const KZGProof *kzg_aggregated_proof,
 	    const KZGSettings *s);
 */
-func VerifyAggregateKzgProof(blobs []Blob, commitments []Commitment, proof Proof) (C.bool, C.C_KZG_RET) {
+func VerifyAggregateKzgProof(blobs []Blob, commitments []Commitment, proof Proof) (bool, C.C_KZG_RET) {
     if len(blobs) != len(commitments) {
         panic("len(blobs) != len(commitments)")
     }
@@ -181,7 +181,7 @@ func VerifyAggregateKzgProof(blobs []Blob, commitments []Commitment, proof Proof
         (C.size_t)(len(blobs)),
         (*C.KZGProof)(unsafe.Pointer(&proof)),
         &settings)
-    return result, ret
+    return bool(result), ret
 }
 
 /*
