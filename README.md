@@ -4,9 +4,15 @@
 
 This uses [Cgo](https://go.dev/blog/cgo) (which lets Go packages call C code)
 and [Go Fuzzing](https://go.dev/security/fuzz/) (Go's built in fuzzing tool) to
-fuzz the exported KZG functions.
+fuzz the exported functions in
+[C-KZG-4844](https://github.com/ethereum/c-kzg-4844) and
+[go-kzg](https://github.com/protolambda/go-kzg). For several of these functions,
+we compare implementation results given the same inputs; we expect these to be
+the same.
 
 ## Prerequisites
+
+You must run these commands **once** before fuzzing:
 
 ```
 git submodule update --init --recursive
@@ -17,42 +23,46 @@ cd ../..
 
 ## Fuzzing
 
-### `bytes_to_g1`
+### C-KZG-4844 specific fuzzing tests
+
+#### `bytes_to_g1`
 ```
 go test -fuzz=FuzzBytesToG1 .
 ```
 
-### `bytes_from_g1`
+#### `bytes_from_g1`
 ```
 go test -fuzz=FuzzBytesFromG1 .
 ```
 
-### `bytes_to_bls_field`
+#### `bytes_to_bls_field`
 ```
 go test -fuzz=FuzzBytesToBlsField .
 ```
 
-### `compute_aggregate_kzg_proof`
+### Differential fuzzing tests
+
+#### `compute_aggregate_kzg_proof`
 ```
 go test -fuzz=FuzzComputeAggregateKzgProof .
 ```
 
-### `verify_aggregate_kzg_proof`
+#### `verify_aggregate_kzg_proof`
 ```
 go test -fuzz=FuzzVerifyAggregateKzgProof .
 ```
 
-### `blob_to_kzg_commitment`
+#### `blob_to_kzg_commitment`
 ```
 go test -fuzz=FuzzBlobToKzgCommitment .
 ```
 
-### `verify_kzg_proof`
+#### `verify_kzg_proof`
 ```
 go test -fuzz=FuzzVerifyKzgProof .
 ```
 
-### Problems
+### Problems you may encounter
 
 #### Cannot use (*a*) as type (*b*) in variable declaration
 
