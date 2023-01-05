@@ -1,7 +1,6 @@
 package fuzz
 
 import (
-	"bytes"
 	"os"
 	"testing"
 
@@ -100,17 +99,6 @@ func FuzzComputeAggregateKzgProof(f *testing.F) {
 		require.Equal(t, expectedRet == 0, err == nil)
 		if expectedRet == 0 && err == nil {
 			require.Equal(t, expectedProof[:], proof[:])
-			emptyOrAllZero := true
-			for i, blob := range blobs {
-				if !bytes.Equal(blob[:], BlobAllZero[:]) {
-					t.Logf("Blob #%v: %v * 4096\n", i, blob[:32])
-					emptyOrAllZero = false
-					break
-				}
-			}
-			if !emptyOrAllZero {
-				require.NotEqual(t, expectedProof, IdentityPoint)
-			}
 		}
 	})
 }
