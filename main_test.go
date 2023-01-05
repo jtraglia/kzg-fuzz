@@ -43,12 +43,12 @@ func FuzzBytesFromG1(f *testing.F) {
 		if err != nil {
 			t.SkipNow()
 		}
-		g1Bytes, err := tp.GetNBytes(g1Size)
+		g1Bytes, err := tp.GetNBytes(g1StructSize)
 		if err != nil {
 			t.SkipNow()
 		}
 
-		var g1 [g1Size]byte
+		var g1 [g1StructSize]byte
 		copy(g1[:], g1Bytes)
 
 		result := BytesFromG1(g1)
