@@ -8,9 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var IdentityPoint = [48]byte{192}
-var BlobAllZero = [blobSize]byte{}
-
 func TestMain(m *testing.M) {
 	ret := LoadTrustedSetupFile("c-kzg-4844/src/trusted_setup.txt")
 	if ret != 0 {
@@ -96,6 +93,7 @@ func FuzzComputeAggregateKzgProof(f *testing.F) {
 		expectedProof, expectedRet := ComputeAggregateKzgProof(blobs)
 		proof, err := gokzg.ComputeAggregateKZGProof(goKzgBlobs)
 
+		t.Logf("go-kzg error: %v\n", err)
 		require.Equal(t, expectedRet == 0, err == nil)
 		if expectedRet == 0 && err == nil {
 			require.Equal(t, expectedProof[:], proof[:])

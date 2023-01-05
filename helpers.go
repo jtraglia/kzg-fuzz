@@ -1,8 +1,6 @@
 package fuzz
 
 import (
-	"bytes"
-
 	bls12381 "github.com/jtraglia/bls12-381"
 	gokzg "github.com/protolambda/go-kzg/eth"
 	go_fuzz_utils "github.com/trailofbits/go-fuzz-utils"
@@ -21,14 +19,23 @@ func GetRandBlob(data []byte) (Blob, bool) {
 	if err != nil {
 		return Blob{}, false
 	}
-	blobBytesPart, err := tp.GetNBytes(32)
+	randomUint, err := tp.GetUint()
 	if err != nil {
 		return Blob{}, false
 	}
-	blobBytes := bytes.Repeat(blobBytesPart, 4096)
 
 	var blob Blob
-	copy(blob[:], blobBytes)
+	numFieldElements := randomUint % 64
+	for i := 0; i < int(numFieldElements); i += bytesPerFieldElement {
+		// This adds a trailing zero to the field element. I'm not actually
+		// sure if this is necessary. Also, if there's no more data,
+		// return what we have. No need to waste a good test case.
+		fieldElement, err := tp.GetNBytes(bytesPerFieldElement - 1)
+		if err != nil {
+			break
+		}
+		copy(blob[i:i+bytesPerFieldElement-1], fieldElement)
+	}
 	return blob, true
 }
 
