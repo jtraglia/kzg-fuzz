@@ -24,16 +24,14 @@ func FuzzBytesToG1(f *testing.F) {
 		if err != nil {
 			t.SkipNow()
 		}
-		g1Bytes, err := tp.GetNBytes(48)
+		compressedBytes, err := tp.GetNBytes(compressedG1Size)
 		if err != nil {
 			t.SkipNow()
 		}
 
-		var bytes48 [48]byte
-		copy(bytes48[:], g1Bytes)
-
-		g1, ret := BytesToG1(bytes48)
-		t.Log(g1, ret)
+		var compressed [compressedG1Size]byte
+		copy(compressed[:], compressedBytes)
+		BytesToG1(compressed)
 	})
 }
 
@@ -50,9 +48,29 @@ func FuzzBytesFromG1(f *testing.F) {
 
 		var g1 [g1StructSize]byte
 		copy(g1[:], g1Bytes)
+		BytesFromG1(g1)
+	})
+}
 
-		result := BytesFromG1(g1)
-		t.Log(result)
+func FuzzRoundTripG1(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		tp, err := GetTypeProvider(data)
+		if err != nil {
+			t.SkipNow()
+		}
+		compressedBytes, err := tp.GetNBytes(compressedG1Size)
+		if err != nil {
+			t.SkipNow()
+		}
+
+		var compressed [compressedG1Size]byte
+		copy(compressed[:], compressedBytes)
+
+		g1, ret := BytesToG1(compressed)
+		if ret == 0 {
+			result := BytesFromG1(g1)
+			require.Equal(t, compressed, result)
+		}
 	})
 }
 
