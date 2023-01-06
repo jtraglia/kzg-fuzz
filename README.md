@@ -23,6 +23,17 @@ cd ../..
 
 ## Fuzzing
 
+To fuzz all functions for 5 minutes each perpetually, run this script:
+
+```
+./fuzz.sh
+```
+If you want to change the fuzzing time, override the `FUZZTIME` variable:
+
+```
+FUZZTIME=10m ./fuzz.sh
+```
+
 ### C-KZG-4844 specific fuzzing tests
 
 ```

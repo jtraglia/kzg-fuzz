@@ -76,7 +76,7 @@ func GetRandG1(data []byte) ([]byte, []byte, bool) {
 }
 
 func GetRandCommitment(data []byte) (Commitment, gokzg.KZGCommitment, bool) {
-	goKzgCommitmentBytes, cKzgCommitmentBytes, ok := GetRandG1(data)
+	cKzgCommitmentBytes, goKzgCommitmentBytes, ok := GetRandG1(data)
 	if !ok {
 		return Commitment{}, gokzg.KZGCommitment{}, false
 	}
@@ -88,7 +88,7 @@ func GetRandCommitment(data []byte) (Commitment, gokzg.KZGCommitment, bool) {
 }
 
 func GetRandProof(data []byte) (Proof, gokzg.KZGProof, bool) {
-	goKzgProofBytes, cKzgProofBytes, ok := GetRandG1(data)
+	cKzgProofBytes, goKzgProofBytes, ok := GetRandG1(data)
 	if !ok {
 		return Proof{}, gokzg.KZGProof{}, false
 	}
