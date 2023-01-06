@@ -1,25 +1,10 @@
 # KZG Fuzz
 
-⚠️ work in progress ⚠️
-
-This uses [Cgo](https://go.dev/blog/cgo) (which lets Go packages call C code)
-and [Go Fuzzing](https://go.dev/security/fuzz/) (Go's built in fuzzing tool) to
-fuzz the exported functions in
+This repository has functions that fuzz the exported functions in
 [C-KZG-4844](https://github.com/ethereum/c-kzg-4844) and
 [go-kzg](https://github.com/protolambda/go-kzg). For several of these functions,
 we compare implementation results given the same inputs; we expect these to be
 the same.
-
-## Prerequisites
-
-You must run these commands **once** before fuzzing:
-
-```
-git submodule update --init --recursive
-cd c-kzg-4844/src
-make blst
-cd ../..
-```
 
 ## Fuzzing
 

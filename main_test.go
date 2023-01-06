@@ -4,18 +4,19 @@ import (
 	"os"
 	"testing"
 
+	ckzg "github.com/jtraglia/cgo-kzg-4844"
 	"github.com/protolambda/go-kzg/bls"
 	gokzg "github.com/protolambda/go-kzg/eth"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMain(m *testing.M) {
-	ret := LoadTrustedSetupFile("c-kzg-4844/src/trusted_setup.txt")
+	ret := ckzg.LoadTrustedSetupFile("trusted_setup.txt")
 	if ret != 0 {
 		panic("Failed to load trusted setup")
 	}
 	code := m.Run()
-	FreeTrustedSetup()
+	ckzg.FreeTrustedSetup()
 	os.Exit(code)
 }
 
@@ -29,14 +30,14 @@ func FuzzBytesToG1(f *testing.F) {
 		if err != nil {
 			t.SkipNow()
 		}
-		compressedBytes, err := tp.GetNBytes(compressedG1Size)
+		compressedBytes, err := tp.GetNBytes(ckzg.CompressedG1Size)
 		if err != nil {
 			t.SkipNow()
 		}
 
-		var compressed [compressedG1Size]byte
+		var compressed [ckzg.CompressedG1Size]byte
 		copy(compressed[:], compressedBytes)
-		BytesToG1(compressed)
+		ckzg.BytesToG1(compressed)
 	})
 }
 
@@ -46,14 +47,14 @@ func FuzzBytesFromG1(f *testing.F) {
 		if err != nil {
 			t.SkipNow()
 		}
-		g1Bytes, err := tp.GetNBytes(g1StructSize)
+		g1Bytes, err := tp.GetNBytes(ckzg.G1StructSize)
 		if err != nil {
 			t.SkipNow()
 		}
 
-		var g1 [g1StructSize]byte
+		var g1 [ckzg.G1StructSize]byte
 		copy(g1[:], g1Bytes)
-		BytesFromG1(g1)
+		ckzg.BytesFromG1(g1)
 	})
 }
 
@@ -63,17 +64,17 @@ func FuzzRoundTripG1(f *testing.F) {
 		if err != nil {
 			t.SkipNow()
 		}
-		compressedBytes, err := tp.GetNBytes(compressedG1Size)
+		compressedBytes, err := tp.GetNBytes(ckzg.CompressedG1Size)
 		if err != nil {
 			t.SkipNow()
 		}
 
-		var compressed [compressedG1Size]byte
+		var compressed [ckzg.CompressedG1Size]byte
 		copy(compressed[:], compressedBytes)
 
-		g1, ret := BytesToG1(compressed)
+		g1, ret := ckzg.BytesToG1(compressed)
 		if ret == 0 {
-			result := BytesFromG1(g1)
+			result := ckzg.BytesFromG1(g1)
 			require.Equal(t, compressed, result)
 		}
 	})
@@ -85,14 +86,14 @@ func FuzzBytesToBlsField(f *testing.F) {
 		if err != nil {
 			t.SkipNow()
 		}
-		blsFieldBytes, err := tp.GetNBytes(bytesPerFieldElement)
+		blsFieldBytes, err := tp.GetNBytes(ckzg.BytesPerFieldElement)
 		if err != nil {
 			t.SkipNow()
 		}
 
-		var bytes32 [bytesPerFieldElement]byte
+		var bytes32 [ckzg.BytesPerFieldElement]byte
 		copy(bytes32[:], blsFieldBytes)
-		BytesToBlsField(bytes32)
+		ckzg.BytesToBlsField(bytes32)
 	})
 }
 
@@ -170,7 +171,7 @@ func FuzzEvaluatePolynomialInEvaluationForm(f *testing.F) {
 
 func FuzzComputeAggregateKzgProof(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
-		cKzgBlobs := []Blob{}
+		cKzgBlobs := []ckzg.Blob{}
 		goKzgBlobs := GoKzgBlobSequenceImpl{}
 		for i := 0; i < 5; i++ {
 			cKzgBlob, goKzgBlob, ok := GetRandBlob(data)
@@ -181,7 +182,7 @@ func FuzzComputeAggregateKzgProof(f *testing.F) {
 			goKzgBlobs = append(goKzgBlobs, goKzgBlob)
 		}
 
-		cKzgProof, ret := ComputeAggregateKzgProof(cKzgBlobs)
+		cKzgProof, ret := ckzg.ComputeAggregateKzgProof(cKzgBlobs)
 		goKzgProof, err := gokzg.ComputeAggregateKZGProof(goKzgBlobs)
 
 		t.Logf("go-kzg error: %v\n", err)
@@ -199,9 +200,9 @@ func FuzzVerifyAggregateKzgProof(f *testing.F) {
 			t.SkipNow()
 		}
 
-		cKzgBlobs := []Blob{}
+		cKzgBlobs := []ckzg.Blob{}
 		goKzgBlobs := GoKzgBlobSequenceImpl{}
-		cKzgCommitments := []Commitment{}
+		cKzgCommitments := []ckzg.Commitment{}
 		goKzgCommitments := gokzg.KZGCommitmentSequenceImpl{}
 
 		for i := 0; i < 5; i++ {
@@ -220,7 +221,7 @@ func FuzzVerifyAggregateKzgProof(f *testing.F) {
 			goKzgCommitments = append(goKzgCommitments, goKzgCommitment)
 		}
 
-		cKzgResult, ret := VerifyAggregateKzgProof(cKzgBlobs, cKzgCommitments, cKzgProof)
+		cKzgResult, ret := ckzg.VerifyAggregateKzgProof(cKzgBlobs, cKzgCommitments, cKzgProof)
 		goKzgResult, err := gokzg.VerifyAggregateKZGProof(goKzgBlobs, goKzgCommitments, goKzgProof)
 
 		t.Logf("go-kzg error: %v\n", err)
@@ -236,7 +237,7 @@ func FuzzBlobToKzgCommitment(f *testing.F) {
 			t.SkipNow()
 		}
 
-		cKzgCommitment, cKzgRet := BlobToKzgCommitment(cKzgBlob)
+		cKzgCommitment, cKzgRet := ckzg.BlobToKzgCommitment(cKzgBlob)
 		goKzgCommitment, goKzgRet := gokzg.BlobToKZGCommitment(goKzgBlob)
 
 		require.Equal(t, cKzgRet == 0, goKzgRet == true)
@@ -261,18 +262,18 @@ func FuzzVerifyKzgProof(f *testing.F) {
 		if err != nil {
 			t.SkipNow()
 		}
-		zBytes, err := tp.GetNBytes(bytesPerFieldElement)
+		zBytes, err := tp.GetNBytes(ckzg.BytesPerFieldElement)
 		if err != nil {
 			t.SkipNow()
 		}
-		yBytes, err := tp.GetNBytes(bytesPerFieldElement)
+		yBytes, err := tp.GetNBytes(ckzg.BytesPerFieldElement)
 		if err != nil {
 			t.SkipNow()
 		}
 
-		var cKzgZ [bytesPerFieldElement]byte
+		var cKzgZ [ckzg.BytesPerFieldElement]byte
 		copy(cKzgZ[:], zBytes)
-		var cKzgY [bytesPerFieldElement]byte
+		var cKzgY [ckzg.BytesPerFieldElement]byte
 		copy(cKzgY[:], yBytes)
 
 		var goKzgZ [32]byte
@@ -280,7 +281,7 @@ func FuzzVerifyKzgProof(f *testing.F) {
 		var goKzgY [32]byte
 		copy(goKzgY[:], yBytes)
 
-		cKzgResult, ret := VerifyKzgProof(cKzgCommitment, cKzgZ, cKzgY, cKzgProof)
+		cKzgResult, ret := ckzg.VerifyKzgProof(cKzgCommitment, cKzgZ, cKzgY, cKzgProof)
 		goKzgResult, err := gokzg.VerifyKZGProof(goKzgCommitment, goKzgZ, goKzgY, goKzgProof)
 
 		t.Logf("go-kzg error: %v\n", err)
