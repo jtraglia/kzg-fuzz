@@ -38,6 +38,21 @@ go test -fuzz=FuzzRoundTripG1 .
 go test -fuzz=FuzzBytesToBlsField .
 ```
 
+### Go-KZG specific fuzzing tests
+
+```
+go test -fuzz=FuzzKZGToVersionedHash .
+```
+```
+go test -fuzz=FuzzTxPeekBlobVersionedHashes .
+```
+```
+go test -fuzz=FuzzPointEvaluationPrecompile .
+```
+```
+go test -fuzz=FuzzEvaluatePolynomialInEvaluationForm .
+```
+
 ### Differential fuzzing tests
 
 ```
