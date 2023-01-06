@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/protolambda/go-kzg/bls"
 	gokzg "github.com/protolambda/go-kzg/eth"
 	"github.com/stretchr/testify/require"
 )
@@ -17,6 +18,10 @@ func TestMain(m *testing.M) {
 	FreeTrustedSetup()
 	os.Exit(code)
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// C-KZG-4844 Specific Fuzzing Functions
+///////////////////////////////////////////////////////////////////////////////
 
 func FuzzBytesToG1(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
@@ -90,6 +95,78 @@ func FuzzBytesToBlsField(f *testing.F) {
 		BytesToBlsField(bytes32)
 	})
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// Go-KZG Specific Fuzzing Functions
+///////////////////////////////////////////////////////////////////////////////
+
+func FuzzKZGToVersionedHash(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		tp, err := GetTypeProvider(data)
+		if err != nil {
+			t.SkipNow()
+		}
+		var goKzgCommitment gokzg.KZGCommitment
+		input, err := tp.GetNBytes(len(goKzgCommitment))
+		if err != nil {
+			t.SkipNow()
+		}
+		copy(goKzgCommitment[:], input)
+		gokzg.KZGToVersionedHash(goKzgCommitment)
+	})
+}
+
+func FuzzTxPeekBlobVersionedHashes(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		if len(data) < gokzg.BlobVersionedHashesOffset+4 {
+			t.SkipNow()
+		}
+		data[0] = gokzg.BlobTxType
+		gokzg.TxPeekBlobVersionedHashes(data)
+	})
+}
+
+func FuzzPointEvaluationPrecompile(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		tp, err := GetTypeProvider(data)
+		if err != nil {
+			t.SkipNow()
+		}
+		input, err := tp.GetNBytes(gokzg.PrecompileInputLength)
+		if err != nil {
+			t.SkipNow()
+		}
+		gokzg.PointEvaluationPrecompile(input)
+	})
+}
+
+func FuzzEvaluatePolynomialInEvaluationForm(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		tp, err := GetTypeProvider(data)
+		if err != nil {
+			t.SkipNow()
+		}
+		poly := []bls.Fr{}
+		for i := 0; i < 4096; i++ {
+			var fr bls.Fr
+			err = tp.Fill(&fr)
+			if err != nil {
+				t.SkipNow()
+			}
+			poly = append(poly, fr)
+		}
+		var x bls.Fr
+		err = tp.Fill(&x)
+		if err != nil {
+			t.SkipNow()
+		}
+		gokzg.EvaluatePolynomialInEvaluationForm(poly, &x)
+	})
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Differential Fuzzing Functions
+///////////////////////////////////////////////////////////////////////////////
 
 func FuzzComputeAggregateKzgProof(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
