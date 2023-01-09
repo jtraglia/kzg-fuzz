@@ -1,6 +1,6 @@
 module fuzz
 
-go 1.19rc1
+go 1.19
 
 require (
 	github.com/jtraglia/bls12-381 v0.0.0-20230104182256-87e54f9d9861
