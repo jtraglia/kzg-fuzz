@@ -16,10 +16,5 @@ jobs:
         with:
           go-version: ^1.18
         id: go
-      - uses: actions/checkout@v3
-        with:
-          submodules: recursive
-      - name: Setup
-        run: cd c-kzg-4844/src/ && make blst
       - name: Test
         run: CC=clang go test .
