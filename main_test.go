@@ -304,10 +304,37 @@ var commitment1 = [48]byte{192}
 var commitment2 = [48]byte{192}
 var commitment3 = [48]byte{192}
 
-var proof1 = [48]byte{192}
+var proof = [48]byte{192}
 
 var z = [32]byte{1}
 var y = [32]byte{1}
+
+func BenchmarkBytesFromG1(b *testing.B) {
+	var g1 = [ckzg.G1StructSize]byte{}
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		ckzg.BytesFromG1(g1)
+	}
+}
+
+func BenchmarkBytesToG1(b *testing.B) {
+	var g1Bytes = [ckzg.CompressedG1Size]byte{192}
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, ret := ckzg.BytesToG1(g1Bytes)
+		require.Equal(b, 0, ret)
+	}
+}
+
+func BenchmarkBytesToBlsField(b *testing.B) {
+	var blsFieldBytes = [ckzg.BytesPerFieldElement]byte{}
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, ret := ckzg.BytesToBlsField(blsFieldBytes)
+		require.Equal(b, 0, ret)
+	}
+}
 
 func BenchmarkComputeAggregateKzgProofCkzg(b *testing.B) {
 	cKzgBlobs := []ckzg.Blob{blob1, blob2, blob3}
@@ -341,7 +368,7 @@ func BenchmarkVerifyAggregateKzgProofCkzg(b *testing.B) {
 	cKzgCommitment3, ret := ckzg.BytesToG1(commitment3)
 	require.Equal(b, 0, ret)
 	cKzgCommitments = append(cKzgCommitments, cKzgCommitment3)
-	cKzgProof, ret := ckzg.BytesToG1(proof1)
+	cKzgProof, ret := ckzg.BytesToG1(proof)
 	require.Equal(b, 0, ret)
 
 	b.ResetTimer()
@@ -354,7 +381,7 @@ func BenchmarkVerifyAggregateKzgProofCkzg(b *testing.B) {
 func BenchmarkVerifyAggregateKzgProofGokzg(b *testing.B) {
 	goKzgBlobs := GoKzgBlobSequenceImpl{blob1[:], blob2[:], blob3[:]}
 	goKzgCommitments := gokzg.KZGCommitmentSequenceImpl{commitment1, commitment2, commitment3}
-	goKzgProof := gokzg.KZGProof(proof1)
+	goKzgProof := gokzg.KZGProof(proof)
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
@@ -388,7 +415,7 @@ func BenchmarkVerifyKzgProofCkzg(b *testing.B) {
 	copy(cKzgZ[:], z[:])
 	var cKzgY [ckzg.BytesPerFieldElement]byte
 	copy(cKzgY[:], y[:])
-	cKzgProof, ret := ckzg.BytesToG1(proof1)
+	cKzgProof, ret := ckzg.BytesToG1(proof)
 	require.Equal(b, 0, ret)
 
 	b.ResetTimer()
@@ -400,7 +427,7 @@ func BenchmarkVerifyKzgProofCkzg(b *testing.B) {
 
 func BenchmarkVerifyKzgProofGokzg(b *testing.B) {
 	goKzgCommitment := gokzg.KZGCommitment(commitment1)
-	goKzgProof := gokzg.KZGProof(proof1)
+	goKzgProof := gokzg.KZGProof(proof)
 
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
