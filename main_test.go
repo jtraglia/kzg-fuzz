@@ -291,3 +291,120 @@ func FuzzVerifyKzgProof(f *testing.F) {
 		}
 	})
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// Benchmarks
+///////////////////////////////////////////////////////////////////////////////
+
+var blob1 = ckzg.Blob{1}
+var blob2 = ckzg.Blob{2}
+var blob3 = ckzg.Blob{3}
+
+var commitment1 = [48]byte{192}
+var commitment2 = [48]byte{192}
+var commitment3 = [48]byte{192}
+
+var proof1 = [48]byte{192}
+
+var z = [32]byte{1}
+var y = [32]byte{1}
+
+func BenchmarkComputeAggregateKzgProofCkzg(b *testing.B) {
+	cKzgBlobs := []ckzg.Blob{blob1, blob2, blob3}
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, ret := ckzg.ComputeAggregateKzgProof(cKzgBlobs)
+		require.Equal(b, 0, ret)
+	}
+}
+
+func BenchmarkComputeAggregateKzgProofGokzg(b *testing.B) {
+	goKzgBlobs := GoKzgBlobSequenceImpl{blob1[:], blob2[:], blob3[:]}
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, err := gokzg.ComputeAggregateKZGProof(goKzgBlobs)
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkVerifyAggregateKzgProofCkzg(b *testing.B) {
+	cKzgBlobs := []ckzg.Blob{blob1, blob2, blob3}
+	cKzgCommitments := []ckzg.Commitment{}
+	cKzgCommitment1, ret := ckzg.BytesToG1(commitment1)
+	require.Equal(b, 0, ret)
+	cKzgCommitments = append(cKzgCommitments, cKzgCommitment1)
+	cKzgCommitment2, ret := ckzg.BytesToG1(commitment2)
+	require.Equal(b, 0, ret)
+	cKzgCommitments = append(cKzgCommitments, cKzgCommitment2)
+	cKzgCommitment3, ret := ckzg.BytesToG1(commitment3)
+	require.Equal(b, 0, ret)
+	cKzgCommitments = append(cKzgCommitments, cKzgCommitment3)
+	cKzgProof, ret := ckzg.BytesToG1(proof1)
+	require.Equal(b, 0, ret)
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, ret := ckzg.VerifyAggregateKzgProof(cKzgBlobs, cKzgCommitments, cKzgProof)
+		require.Equal(b, 0, ret)
+	}
+}
+
+func BenchmarkVerifyAggregateKzgProofGokzg(b *testing.B) {
+	goKzgBlobs := GoKzgBlobSequenceImpl{blob1[:], blob2[:], blob3[:]}
+	goKzgCommitments := gokzg.KZGCommitmentSequenceImpl{commitment1, commitment2, commitment3}
+	goKzgProof := gokzg.KZGProof(proof1)
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, err := gokzg.VerifyAggregateKZGProof(goKzgBlobs, goKzgCommitments, goKzgProof)
+		require.NoError(b, err)
+	}
+}
+
+func BenchmarkBlobToKzgCommitmentCkzg(b *testing.B) {
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, ret := ckzg.BlobToKzgCommitment(blob1)
+		require.Equal(b, 0, ret)
+	}
+}
+
+func BenchmarkBlobToKzgCommitmentGokzg(b *testing.B) {
+	goKzgBlob := GoKzgBlobImpl(blob1[:])
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, ret := gokzg.BlobToKZGCommitment(goKzgBlob)
+		require.Equal(b, true, ret)
+	}
+}
+
+func BenchmarkVerifyKzgProofCkzg(b *testing.B) {
+	cKzgCommitment, ret := ckzg.BytesToG1(commitment1)
+	require.Equal(b, 0, ret)
+	var cKzgZ [ckzg.BytesPerFieldElement]byte
+	copy(cKzgZ[:], z[:])
+	var cKzgY [ckzg.BytesPerFieldElement]byte
+	copy(cKzgY[:], y[:])
+	cKzgProof, ret := ckzg.BytesToG1(proof1)
+	require.Equal(b, 0, ret)
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, ret := ckzg.VerifyKzgProof(cKzgCommitment, cKzgZ, cKzgY, cKzgProof)
+		require.Equal(b, 0, ret)
+	}
+}
+
+func BenchmarkVerifyKzgProofGokzg(b *testing.B) {
+	goKzgCommitment := gokzg.KZGCommitment(commitment1)
+	goKzgProof := gokzg.KZGProof(proof1)
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		_, err := gokzg.VerifyKZGProof(goKzgCommitment, z, y, goKzgProof)
+		require.Equal(b, nil, err)
+	}
+}
