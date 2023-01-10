@@ -57,9 +57,13 @@ func GetRandG1(data []byte) ([]byte, []byte, bool) {
 		if err != nil {
 			return []byte{}, []byte{}, false
 		}
-		g1Point := g1.RandCorrect(zBytes, xBytes)
+		g1Point = g1.RandCorrect(zBytes, xBytes)
 		if g1Point != nil {
-			break
+			compressedBytes := g1.ToCompressed(g1Point)
+			_, err = bls12381.NewG1().FromCompressed(compressedBytes)
+			if err == nil {
+				break
+			}
 		}
 	}
 	if g1 == nil || g1Point == nil {
