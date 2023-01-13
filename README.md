@@ -19,21 +19,6 @@ If you want to change the fuzzing time, override the `FUZZTIME` variable:
 FUZZTIME=10m ./fuzz.sh
 ```
 
-### C-KZG-4844 specific fuzzing tests
-
-```
-go test -fuzz=FuzzBytesToG1 .
-```
-```
-go test -fuzz=FuzzBytesFromG1 .
-```
-```
-go test -fuzz=FuzzRoundTripG1 .
-```
-```
-go test -fuzz=FuzzBytesToBlsField .
-```
-
 ### Go-KZG specific fuzzing tests
 
 ```

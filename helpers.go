@@ -1,7 +1,9 @@
 package fuzz
 
 import (
-	bls12381 "github.com/jtraglia/bls12-381"
+	"math/rand"
+
+	"github.com/holiman/uint256"
 	ckzg "github.com/jtraglia/cgo-kzg-4844"
 	gokzg "github.com/protolambda/go-kzg/eth"
 	fuzzutils "github.com/trailofbits/go-fuzz-utils"
@@ -15,91 +17,75 @@ func GetTypeProvider(data []byte) (*fuzzutils.TypeProvider, error) {
 	return tp, nil
 }
 
-func GetRandBlob(data []byte) (ckzg.Blob, GoKzgBlobImpl, bool) {
-	tp, err := fuzzutils.NewTypeProvider(data)
-	if err != nil {
-		return ckzg.Blob{}, GoKzgBlobImpl{}, false
-	}
-	randomUint, err := tp.GetUint()
-	if err != nil {
-		return ckzg.Blob{}, GoKzgBlobImpl{}, false
-	}
+func GetRandBlob(tp *fuzzutils.TypeProvider) (ckzg.Blob, GoKzgBlobImpl, bool) {
+	var BlsModulus = new(uint256.Int)
+	BlsModulus.SetFromBig(gokzg.BLSModulus)
 
+	_, fieldElementBytes, ok := GetRandFieldElement(tp)
+	if !ok {
+		return ckzg.Blob{}, GoKzgBlobImpl{}, false
+	}
 	var blob ckzg.Blob
-	numFieldElements := randomUint % 64
-	for i := 0; i < int(numFieldElements); i += ckzg.BytesPerFieldElement {
-		// This adds a trailing zero to the field element. I'm not actually
-		// sure if this is necessary. Also, if there's no more data,
-		// return what we have. No need to waste a good test case.
-		fieldElement, err := tp.GetNBytes(ckzg.BytesPerFieldElement - 1)
-		if err != nil {
-			break
-		}
-		copy(blob[i:i+ckzg.BytesPerFieldElement-1], fieldElement)
+	for i := 0; i < ckzg.BytesPerBlob; i += ckzg.BytesPerFieldElement {
+		field := new(uint256.Int).SetBytes(fieldElementBytes[:])
+		field = field.Mod(field, BlsModulus)
+		copy(blob[i:i+ckzg.BytesPerFieldElement], field.Bytes())
 	}
 	return blob, blob[:], true
 }
 
-func GetRandG1(data []byte) ([]byte, []byte, bool) {
-	tp, err := GetTypeProvider(data)
-	if err != nil {
-		return []byte{}, []byte{}, false
+func GetRandG1(tp *fuzzutils.TypeProvider) ([]byte, bool) {
+	blob, _, ok := GetRandBlob(tp)
+	if ok != false {
+		return []byte{}, false
 	}
-	zBytes, err := tp.GetNBytes(48)
-	if err != nil {
-		return []byte{}, []byte{}, false
+	commitment, ret := ckzg.BlobToKzgCommitment(blob)
+	if ret != ckzg.Ok {
+		return []byte{}, false
 	}
-
-	g1 := bls12381.NewG1()
-	g1Point := g1.New()
-	for {
-		xBytes, err := tp.GetNBytes(48)
-		if err != nil {
-			return []byte{}, []byte{}, false
-		}
-		g1Point = g1.RandCorrect(zBytes, xBytes)
-		if g1Point != nil {
-			compressedBytes := g1.ToCompressed(g1Point)
-			_, err = bls12381.NewG1().FromCompressed(compressedBytes)
-			if err == nil {
-				break
-			}
-		}
-	}
-	if g1 == nil || g1Point == nil {
-		return []byte{}, []byte{}, false
-	}
-
-	compressedBytes := g1.ToCompressed(g1Point)
-	compressed := [ckzg.CompressedG1Size]byte{}
-	copy(compressed[:], compressedBytes)
-	cKzgG1Bytes, ret := ckzg.BytesToG1(compressed)
-	if ret != 0 {
-		panic("invalid g1 point")
-	}
-	return cKzgG1Bytes[:], compressedBytes, true
+	return commitment[:], true
 }
 
-func GetRandCommitment(data []byte) (ckzg.Commitment, gokzg.KZGCommitment, bool) {
-	cKzgCommitmentBytes, goKzgCommitmentBytes, ok := GetRandG1(data)
+func GetRandCommitment(tp *fuzzutils.TypeProvider) (ckzg.KZGCommitment, gokzg.KZGCommitment, bool) {
+	commitmentBytes, ok := GetRandG1(tp)
 	if !ok {
-		return ckzg.Commitment{}, gokzg.KZGCommitment{}, false
+		return ckzg.KZGCommitment{}, gokzg.KZGCommitment{}, false
 	}
-	var cKzgCommitment ckzg.Commitment
-	copy(cKzgCommitment[:], cKzgCommitmentBytes)
+	var cKzgCommitment ckzg.KZGCommitment
+	copy(cKzgCommitment[:], commitmentBytes)
 	var goKzgCommitment gokzg.KZGCommitment
-	copy(goKzgCommitment[:], goKzgCommitmentBytes)
+	copy(goKzgCommitment[:], commitmentBytes)
 	return cKzgCommitment, goKzgCommitment, true
 }
 
-func GetRandProof(data []byte) (ckzg.Proof, gokzg.KZGProof, bool) {
-	cKzgProofBytes, goKzgProofBytes, ok := GetRandG1(data)
+func GetRandProof(tp *fuzzutils.TypeProvider) (ckzg.KZGProof, gokzg.KZGProof, bool) {
+	proofBytes, ok := GetRandG1(tp)
 	if !ok {
-		return ckzg.Proof{}, gokzg.KZGProof{}, false
+		return ckzg.KZGProof{}, gokzg.KZGProof{}, false
 	}
-	var cKzgProof ckzg.Proof
-	copy(cKzgProof[:], cKzgProofBytes)
+	var cKzgProof ckzg.KZGProof
+	copy(cKzgProof[:], proofBytes)
 	var goKzgProof gokzg.KZGProof
-	copy(goKzgProof[:], goKzgProofBytes)
+	copy(goKzgProof[:], proofBytes)
 	return cKzgProof, goKzgProof, true
+}
+
+func GetRandFieldElement(tp *fuzzutils.TypeProvider) (ckzg.BLSFieldElement, [32]byte, bool) {
+	seed, err := tp.GetInt64()
+	if err != nil {
+		return ckzg.BLSFieldElement{}, [32]byte{}, false
+	}
+
+	rand.Seed(seed)
+	fieldElementBytes := make([]byte, ckzg.BytesPerFieldElement)
+	_, err = rand.Read(fieldElementBytes)
+	if err != nil {
+		return ckzg.BLSFieldElement{}, [32]byte{}, false
+	}
+
+	var cKzgFieldElement ckzg.BLSFieldElement
+	copy(cKzgFieldElement[:], fieldElementBytes)
+	var goKzgFieldElement [32]byte
+	copy(goKzgFieldElement[:], fieldElementBytes)
+	return cKzgFieldElement, goKzgFieldElement, true
 }
