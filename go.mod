@@ -23,5 +23,3 @@ require (
 	github.com/stretchr/testify v1.8.1
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/jtraglia/cgo-kzg-4844 => ../cgo-kzg-4844
