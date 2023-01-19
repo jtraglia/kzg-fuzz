@@ -18,18 +18,13 @@ func GetTypeProvider(data []byte) (*fuzzutils.TypeProvider, error) {
 }
 
 func GetRandBlob(tp *fuzzutils.TypeProvider) (ckzg.Blob, GoKzgBlobImpl, bool) {
-	var BlsModulus = new(uint256.Int)
-	BlsModulus.SetFromBig(gokzg.BLSModulus)
-
-	_, fieldElementBytes, ok := GetRandFieldElement(tp)
+	_, canonicalFieldElementBytes, ok := GetRandFieldElement(tp)
 	if !ok {
 		return ckzg.Blob{}, GoKzgBlobImpl{}, false
 	}
 	var blob ckzg.Blob
 	for i := 0; i < ckzg.BytesPerBlob; i += ckzg.BytesPerFieldElement {
-		field := new(uint256.Int).SetBytes(fieldElementBytes[:])
-		field = field.Mod(field, BlsModulus)
-		copy(blob[i:i+ckzg.BytesPerFieldElement], field.Bytes())
+		copy(blob[i:i+ckzg.BytesPerFieldElement], canonicalFieldElementBytes[:])
 	}
 	return blob, blob[:], true
 }
@@ -39,8 +34,8 @@ func GetRandG1(tp *fuzzutils.TypeProvider) ([]byte, bool) {
 	if ok != false {
 		return []byte{}, false
 	}
-	commitment, ret := ckzg.BlobToKzgCommitment(blob)
-	if ret != ckzg.Ok {
+	commitment, ret := ckzg.BlobToKZGCommitment(blob)
+	if ret != ckzg.C_KZG_OK {
 		return []byte{}, false
 	}
 	return commitment[:], true
@@ -83,9 +78,13 @@ func GetRandFieldElement(tp *fuzzutils.TypeProvider) (ckzg.BLSFieldElement, [32]
 		return ckzg.BLSFieldElement{}, [32]byte{}, false
 	}
 
+	var BlsModulus = new(uint256.Int)
+	BlsModulus.SetFromBig(gokzg.BLSModulus)
+	field := new(uint256.Int).SetBytes(fieldElementBytes[:])
+	field = field.Mod(field, BlsModulus)
+	canonicalFieldElementBytes := field.Bytes32()
+
 	var cKzgFieldElement ckzg.BLSFieldElement
-	copy(cKzgFieldElement[:], fieldElementBytes)
-	var goKzgFieldElement [32]byte
-	copy(goKzgFieldElement[:], fieldElementBytes)
-	return cKzgFieldElement, goKzgFieldElement, true
+	copy(cKzgFieldElement[:], canonicalFieldElementBytes[:])
+	return cKzgFieldElement, canonicalFieldElementBytes, true
 }

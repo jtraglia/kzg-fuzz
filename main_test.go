@@ -12,7 +12,7 @@ import (
 
 func TestMain(m *testing.M) {
 	ret := ckzg.LoadTrustedSetupFile("trusted_setup.txt")
-	if ret != 0 {
+	if ret != ckzg.C_KZG_OK {
 		panic("Failed to load trusted setup")
 	}
 	code := m.Run()
@@ -66,7 +66,7 @@ func FuzzEvaluatePolynomialInEvaluationForm(f *testing.F) {
 			t.SkipNow()
 		}
 		poly := []bls.Fr{}
-		for i := 0; i < 4096; i++ {
+		for i := 0; i < gokzg.FieldElementsPerBlob; i++ {
 			var fr bls.Fr
 			err = tp.Fill(&fr)
 			if err != nil {
@@ -105,12 +105,12 @@ func FuzzComputeAggregateKzgProof(f *testing.F) {
 			goKzgBlobs = append(goKzgBlobs, goKzgBlob)
 		}
 
-		cKzgProof, ret := ckzg.ComputeAggregateKzgProof(cKzgBlobs)
+		cKzgProof, ret := ckzg.ComputeAggregateKZGProof(cKzgBlobs)
 		goKzgProof, err := gokzg.ComputeAggregateKZGProof(goKzgBlobs)
 
 		t.Logf("go-kzg error: %v\n", err)
-		require.Equal(t, ret == 0, err == nil)
-		if ret == 0 && err == nil {
+		require.Equal(t, ret == ckzg.C_KZG_OK, err == nil)
+		if ret == ckzg.C_KZG_OK && err == nil {
 			require.Equal(t, cKzgProof[:], goKzgProof[:])
 		}
 	})
@@ -148,11 +148,11 @@ func FuzzVerifyAggregateKzgProof(f *testing.F) {
 			goKzgCommitments = append(goKzgCommitments, goKzgCommitment)
 		}
 
-		cKzgResult, ret := ckzg.VerifyAggregateKzgProof(cKzgBlobs, cKzgCommitments, cKzgProof)
+		cKzgResult, ret := ckzg.VerifyAggregateKZGProof(cKzgBlobs, cKzgCommitments, cKzgProof)
 		goKzgResult, err := gokzg.VerifyAggregateKZGProof(goKzgBlobs, goKzgCommitments, goKzgProof)
 
 		t.Logf("go-kzg error: %v\n", err)
-		require.Equal(t, ret == 0, err == nil)
+		require.Equal(t, ret == ckzg.C_KZG_OK, err == nil)
 		require.Equal(t, cKzgResult, goKzgResult)
 	})
 }
@@ -168,11 +168,11 @@ func FuzzBlobToKzgCommitment(f *testing.F) {
 			t.SkipNow()
 		}
 
-		cKzgCommitment, cKzgRet := ckzg.BlobToKzgCommitment(cKzgBlob)
+		cKzgCommitment, cKzgRet := ckzg.BlobToKZGCommitment(cKzgBlob)
 		goKzgCommitment, goKzgRet := gokzg.BlobToKZGCommitment(goKzgBlob)
 
-		require.Equal(t, cKzgRet == 0, goKzgRet == true)
-		if cKzgRet == 0 && goKzgRet == true {
+		require.Equal(t, cKzgRet == ckzg.C_KZG_OK, goKzgRet == true)
+		if cKzgRet == ckzg.C_KZG_OK && goKzgRet == true {
 			require.Equal(t, cKzgCommitment[:], goKzgCommitment[:])
 		}
 	})
@@ -201,12 +201,12 @@ func FuzzVerifyKzgProof(f *testing.F) {
 			t.SkipNow()
 		}
 
-		cKzgResult, ret := ckzg.VerifyKzgProof(cKzgCommitment, cKzgZ, cKzgY, cKzgProof)
+		cKzgResult, ret := ckzg.VerifyKZGProof(cKzgCommitment, cKzgZ, cKzgY, cKzgProof)
 		goKzgResult, err := gokzg.VerifyKZGProof(goKzgCommitment, goKzgZ, goKzgY, goKzgProof)
 
 		t.Logf("go-kzg error: %v\n", err)
-		require.Equal(t, ret == 0, err == nil)
-		if ret == 0 && err == nil {
+		require.Equal(t, ret == ckzg.C_KZG_OK, err == nil)
+		if ret == ckzg.C_KZG_OK && err == nil {
 			require.Equal(t, cKzgResult, goKzgResult)
 		}
 	})
