@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	ckzg "github.com/jtraglia/cgo-kzg-4844"
+	ckzg "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/protolambda/go-kzg/bls"
 	gokzg "github.com/protolambda/go-kzg/eth"
 	"github.com/stretchr/testify/require"
@@ -129,7 +129,7 @@ func FuzzVerifyAggregateKzgProof(f *testing.F) {
 
 		cKzgBlobs := []ckzg.Blob{}
 		goKzgBlobs := GoKzgBlobSequenceImpl{}
-		cKzgCommitments := []ckzg.KZGCommitment{}
+		cKzgCommitments := []ckzg.Bytes48{}
 		goKzgCommitments := gokzg.KZGCommitmentSequenceImpl{}
 
 		for i := 0; i < 5; i++ {

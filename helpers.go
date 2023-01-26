@@ -3,8 +3,8 @@ package fuzz
 import (
 	"math/rand"
 
+	ckzg "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/holiman/uint256"
-	ckzg "github.com/jtraglia/cgo-kzg-4844"
 	gokzg "github.com/protolambda/go-kzg/eth"
 	fuzzutils "github.com/trailofbits/go-fuzz-utils"
 )
@@ -41,41 +41,41 @@ func GetRandG1(tp *fuzzutils.TypeProvider) ([]byte, bool) {
 	return commitment[:], true
 }
 
-func GetRandCommitment(tp *fuzzutils.TypeProvider) (ckzg.KZGCommitment, gokzg.KZGCommitment, bool) {
+func GetRandCommitment(tp *fuzzutils.TypeProvider) (ckzg.Bytes48, gokzg.KZGCommitment, bool) {
 	commitmentBytes, ok := GetRandG1(tp)
 	if !ok {
-		return ckzg.KZGCommitment{}, gokzg.KZGCommitment{}, false
+		return ckzg.Bytes48{}, gokzg.KZGCommitment{}, false
 	}
-	var cKzgCommitment ckzg.KZGCommitment
+	var cKzgCommitment ckzg.Bytes48
 	copy(cKzgCommitment[:], commitmentBytes)
 	var goKzgCommitment gokzg.KZGCommitment
 	copy(goKzgCommitment[:], commitmentBytes)
 	return cKzgCommitment, goKzgCommitment, true
 }
 
-func GetRandProof(tp *fuzzutils.TypeProvider) (ckzg.KZGProof, gokzg.KZGProof, bool) {
+func GetRandProof(tp *fuzzutils.TypeProvider) (ckzg.Bytes48, gokzg.KZGProof, bool) {
 	proofBytes, ok := GetRandG1(tp)
 	if !ok {
-		return ckzg.KZGProof{}, gokzg.KZGProof{}, false
+		return ckzg.Bytes48{}, gokzg.KZGProof{}, false
 	}
-	var cKzgProof ckzg.KZGProof
+	var cKzgProof ckzg.Bytes48
 	copy(cKzgProof[:], proofBytes)
 	var goKzgProof gokzg.KZGProof
 	copy(goKzgProof[:], proofBytes)
 	return cKzgProof, goKzgProof, true
 }
 
-func GetRandFieldElement(tp *fuzzutils.TypeProvider) (ckzg.BLSFieldElement, [32]byte, bool) {
+func GetRandFieldElement(tp *fuzzutils.TypeProvider) (ckzg.Bytes32, [32]byte, bool) {
 	seed, err := tp.GetInt64()
 	if err != nil {
-		return ckzg.BLSFieldElement{}, [32]byte{}, false
+		return ckzg.Bytes32{}, [32]byte{}, false
 	}
 
 	rand.Seed(seed)
 	fieldElementBytes := make([]byte, ckzg.BytesPerFieldElement)
 	_, err = rand.Read(fieldElementBytes)
 	if err != nil {
-		return ckzg.BLSFieldElement{}, [32]byte{}, false
+		return ckzg.Bytes32{}, [32]byte{}, false
 	}
 
 	var BlsModulus = new(uint256.Int)
@@ -84,7 +84,7 @@ func GetRandFieldElement(tp *fuzzutils.TypeProvider) (ckzg.BLSFieldElement, [32]
 	field = field.Mod(field, BlsModulus)
 	canonicalFieldElementBytes := field.Bytes32()
 
-	var cKzgFieldElement ckzg.BLSFieldElement
+	var cKzgFieldElement ckzg.Bytes32
 	copy(cKzgFieldElement[:], canonicalFieldElementBytes[:])
 	return cKzgFieldElement, canonicalFieldElementBytes, true
 }
