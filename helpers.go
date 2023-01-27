@@ -48,6 +48,29 @@ func GetRandFieldElement(tp *fuzzutils.TypeProvider) (ckzg.Bytes32, [32]byte, bo
 	}
 }
 
+func GetRandCanonicalFieldElement(tp *fuzzutils.TypeProvider) (ckzg.Bytes32, [32]byte, bool) {
+	seed, err := tp.GetInt64()
+	if err != nil {
+		return ckzg.Bytes32{}, [32]byte{}, false
+	}
+
+	rand.Seed(seed)
+	fieldElementBytes := make([]byte, ckzg.BytesPerFieldElement)
+	_, err = rand.Read(fieldElementBytes)
+	if err != nil {
+		return ckzg.Bytes32{}, [32]byte{}, false
+	}
+	var BlsModulus = new(uint256.Int)
+	BlsModulus.SetFromBig(gokzg.BLSModulus)
+	field := new(uint256.Int).SetBytes(fieldElementBytes[:])
+	field = field.Mod(field, BlsModulus)
+	canonicalFieldElementBytes := field.Bytes32()
+
+	var cKzgFieldElement ckzg.Bytes32
+	copy(cKzgFieldElement[:], canonicalFieldElementBytes[:])
+	return cKzgFieldElement, canonicalFieldElementBytes, true
+}
+
 func GetRandBlob(tp *fuzzutils.TypeProvider) (ckzg.Blob, GoKzgBlobImpl, bool) {
 	seed, err := tp.GetInt64()
 	if err != nil {
@@ -67,12 +90,12 @@ func GetRandBlob(tp *fuzzutils.TypeProvider) (ckzg.Blob, GoKzgBlobImpl, bool) {
 		return blob, randomBytes, true
 	} else {
 		// Provide a valid/canonical blob.
-		_, canonicalFieldElementBytes, ok := GetRandFieldElement(tp)
-		if !ok {
-			return ckzg.Blob{}, GoKzgBlobImpl{}, false
-		}
 		var blob ckzg.Blob
 		for i := 0; i < ckzg.BytesPerBlob; i += ckzg.BytesPerFieldElement {
+			_, canonicalFieldElementBytes, ok := GetRandCanonicalFieldElement(tp)
+			if !ok {
+				return ckzg.Blob{}, GoKzgBlobImpl{}, false
+			}
 			copy(blob[i:i+ckzg.BytesPerFieldElement], canonicalFieldElementBytes[:])
 		}
 		return blob, blob[:], true
