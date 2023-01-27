@@ -29,16 +29,23 @@ func GetRandFieldElement(tp *fuzzutils.TypeProvider) (ckzg.Bytes32, [32]byte, bo
 	if err != nil {
 		return ckzg.Bytes32{}, [32]byte{}, false
 	}
-
-	var BlsModulus = new(uint256.Int)
-	BlsModulus.SetFromBig(gokzg.BLSModulus)
-	field := new(uint256.Int).SetBytes(fieldElementBytes[:])
-	field = field.Mod(field, BlsModulus)
-	canonicalFieldElementBytes := field.Bytes32()
-
 	var cKzgFieldElement ckzg.Bytes32
-	copy(cKzgFieldElement[:], canonicalFieldElementBytes[:])
-	return cKzgFieldElement, canonicalFieldElementBytes, true
+
+	if seed%2 == 0 {
+		// Provide a completely random field element.
+		copy(cKzgFieldElement[:], fieldElementBytes[:])
+		return cKzgFieldElement, cKzgFieldElement, true
+	} else {
+		// Provide a valid/canonical field element.
+		var BlsModulus = new(uint256.Int)
+		BlsModulus.SetFromBig(gokzg.BLSModulus)
+		field := new(uint256.Int).SetBytes(fieldElementBytes[:])
+		field = field.Mod(field, BlsModulus)
+		canonicalFieldElementBytes := field.Bytes32()
+
+		copy(cKzgFieldElement[:], canonicalFieldElementBytes[:])
+		return cKzgFieldElement, canonicalFieldElementBytes, true
+	}
 }
 
 func GetRandBlob(tp *fuzzutils.TypeProvider) (ckzg.Blob, GoKzgBlobImpl, bool) {
