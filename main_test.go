@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	ckzg "github.com/ethereum/c-kzg-4844/bindings/go"
-	"github.com/protolambda/go-kzg/bls"
 	gokzg "github.com/protolambda/go-kzg/eth"
 	"github.com/stretchr/testify/require"
 )
@@ -18,69 +17,6 @@ func TestMain(m *testing.M) {
 	code := m.Run()
 	ckzg.FreeTrustedSetup()
 	os.Exit(code)
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Go-KZG Specific Fuzzing Functions
-///////////////////////////////////////////////////////////////////////////////
-
-func FuzzKZGToVersionedHash(f *testing.F) {
-	f.Fuzz(func(t *testing.T, data []byte) {
-		tp, err := GetTypeProvider(data)
-		if err != nil {
-			t.SkipNow()
-		}
-		var goKzgCommitment gokzg.KZGCommitment
-		input, err := tp.GetNBytes(len(goKzgCommitment))
-		if err != nil {
-			t.SkipNow()
-		}
-		copy(goKzgCommitment[:], input)
-		gokzg.KZGToVersionedHash(goKzgCommitment)
-	})
-}
-
-func FuzzTxPeekBlobVersionedHashes(f *testing.F) {
-	f.Fuzz(func(t *testing.T, data []byte) {
-		if len(data) < gokzg.BlobVersionedHashesOffset+4 {
-			t.SkipNow()
-		}
-		data[0] = gokzg.BlobTxType
-		gokzg.TxPeekBlobVersionedHashes(data)
-	})
-}
-
-func FuzzPointEvaluationPrecompile(f *testing.F) {
-	f.Fuzz(func(t *testing.T, data []byte) {
-		if len(data) < gokzg.PrecompileInputLength {
-			t.SkipNow()
-		}
-		gokzg.PointEvaluationPrecompile(data[:gokzg.PrecompileInputLength])
-	})
-}
-
-func FuzzEvaluatePolynomialInEvaluationForm(f *testing.F) {
-	f.Fuzz(func(t *testing.T, data []byte) {
-		tp, err := GetTypeProvider(data)
-		if err != nil {
-			t.SkipNow()
-		}
-		poly := []bls.Fr{}
-		for i := 0; i < gokzg.FieldElementsPerBlob; i++ {
-			var fr bls.Fr
-			err = tp.Fill(&fr)
-			if err != nil {
-				t.SkipNow()
-			}
-			poly = append(poly, fr)
-		}
-		var x bls.Fr
-		err = tp.Fill(&x)
-		if err != nil {
-			t.SkipNow()
-		}
-		gokzg.EvaluatePolynomialInEvaluationForm(poly, &x)
-	})
 }
 
 ///////////////////////////////////////////////////////////////////////////////
