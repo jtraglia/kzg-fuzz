@@ -23,6 +23,61 @@ func TestMain(m *testing.M) {
 // Differential Fuzzing Functions
 ///////////////////////////////////////////////////////////////////////////////
 
+func FuzzBlobToKzgCommitment(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		tp, err := GetTypeProvider(data)
+		if err != nil {
+			t.SkipNow()
+		}
+		cKzgBlob, goKzgBlob, ok := GetRandBlob(tp)
+		if !ok {
+			t.SkipNow()
+		}
+
+		cKzgCommitment, cKzgRet := ckzg.BlobToKZGCommitment(cKzgBlob)
+		goKzgCommitment, goKzgRet := gokzg.BlobToKZGCommitment(goKzgBlob)
+
+		require.Equal(t, cKzgRet == ckzg.C_KZG_OK, goKzgRet == true)
+		if cKzgRet == ckzg.C_KZG_OK && goKzgRet == true {
+			require.Equal(t, cKzgCommitment[:], goKzgCommitment[:])
+		}
+	})
+}
+
+func FuzzVerifyKzgProof(f *testing.F) {
+	f.Fuzz(func(t *testing.T, data []byte) {
+		tp, err := GetTypeProvider(data)
+		if err != nil {
+			t.SkipNow()
+		}
+		cKzgCommitment, goKzgCommitment, ok := GetRandCommitment(tp)
+		if !ok {
+			t.SkipNow()
+		}
+		cKzgProof, goKzgProof, ok := GetRandProof(tp)
+		if !ok {
+			t.SkipNow()
+		}
+		cKzgZ, goKzgZ, ok := GetRandFieldElement(tp)
+		if !ok {
+			t.SkipNow()
+		}
+		cKzgY, goKzgY, ok := GetRandFieldElement(tp)
+		if !ok {
+			t.SkipNow()
+		}
+
+		cKzgResult, ret := ckzg.VerifyKZGProof(cKzgCommitment, cKzgZ, cKzgY, cKzgProof)
+		goKzgResult, err := gokzg.VerifyKZGProof(goKzgCommitment, goKzgZ, goKzgY, goKzgProof)
+
+		t.Logf("go-kzg error: %v\n", err)
+		require.Equal(t, ret == ckzg.C_KZG_OK, err == nil)
+		if ret == ckzg.C_KZG_OK && err == nil {
+			require.Equal(t, cKzgResult, goKzgResult)
+		}
+	})
+}
+
 func FuzzComputeAggregateKzgProof(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
 		tp, err := GetTypeProvider(data)
@@ -90,60 +145,5 @@ func FuzzVerifyAggregateKzgProof(f *testing.F) {
 		t.Logf("go-kzg error: %v\n", err)
 		require.Equal(t, ret == ckzg.C_KZG_OK, err == nil)
 		require.Equal(t, cKzgResult, goKzgResult)
-	})
-}
-
-func FuzzBlobToKzgCommitment(f *testing.F) {
-	f.Fuzz(func(t *testing.T, data []byte) {
-		tp, err := GetTypeProvider(data)
-		if err != nil {
-			t.SkipNow()
-		}
-		cKzgBlob, goKzgBlob, ok := GetRandBlob(tp)
-		if !ok {
-			t.SkipNow()
-		}
-
-		cKzgCommitment, cKzgRet := ckzg.BlobToKZGCommitment(cKzgBlob)
-		goKzgCommitment, goKzgRet := gokzg.BlobToKZGCommitment(goKzgBlob)
-
-		require.Equal(t, cKzgRet == ckzg.C_KZG_OK, goKzgRet == true)
-		if cKzgRet == ckzg.C_KZG_OK && goKzgRet == true {
-			require.Equal(t, cKzgCommitment[:], goKzgCommitment[:])
-		}
-	})
-}
-
-func FuzzVerifyKzgProof(f *testing.F) {
-	f.Fuzz(func(t *testing.T, data []byte) {
-		tp, err := GetTypeProvider(data)
-		if err != nil {
-			t.SkipNow()
-		}
-		cKzgCommitment, goKzgCommitment, ok := GetRandCommitment(tp)
-		if !ok {
-			t.SkipNow()
-		}
-		cKzgProof, goKzgProof, ok := GetRandProof(tp)
-		if !ok {
-			t.SkipNow()
-		}
-		cKzgZ, goKzgZ, ok := GetRandFieldElement(tp)
-		if !ok {
-			t.SkipNow()
-		}
-		cKzgY, goKzgY, ok := GetRandFieldElement(tp)
-		if !ok {
-			t.SkipNow()
-		}
-
-		cKzgResult, ret := ckzg.VerifyKZGProof(cKzgCommitment, cKzgZ, cKzgY, cKzgProof)
-		goKzgResult, err := gokzg.VerifyKZGProof(goKzgCommitment, goKzgZ, goKzgY, goKzgProof)
-
-		t.Logf("go-kzg error: %v\n", err)
-		require.Equal(t, ret == ckzg.C_KZG_OK, err == nil)
-		if ret == ckzg.C_KZG_OK && err == nil {
-			require.Equal(t, cKzgResult, goKzgResult)
-		}
 	})
 }
