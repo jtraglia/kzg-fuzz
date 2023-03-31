@@ -1,10 +1,10 @@
 # KZG Fuzz
 
 This repository has functions that fuzz the exported functions in
-[C-KZG-4844](https://github.com/ethereum/c-kzg-4844) and
-[go-kzg](https://github.com/protolambda/go-kzg). For several of these functions,
-we compare implementation results given the same inputs; we expect these to be
-the same.
+[C-KZG-4844](https://github.com/ethereum/c-kzg-4844) (c-kzg) and
+[go-proto-danksharing-crypto](https://github.com/crate-crypto/go-proto-danksharding-crypto)
+(go-kzg). For several of these functions, we compare implementation results
+given the same inputs; we expect these to be the same.
 
 ## Fuzzing
 
@@ -19,34 +19,25 @@ If you want to change the fuzzing time, override the `FUZZTIME` variable:
 FUZZTIME=10m ./fuzz.sh
 ```
 
-### Go-KZG specific fuzzing tests
-
-```
-go test -fuzz=FuzzKZGToVersionedHash .
-```
-```
-go test -fuzz=FuzzTxPeekBlobVersionedHashes .
-```
-```
-go test -fuzz=FuzzPointEvaluationPrecompile .
-```
-```
-go test -fuzz=FuzzEvaluatePolynomialInEvaluationForm .
-```
-
 ### Differential fuzzing tests
 
 ```
-go test -fuzz=FuzzComputeAggregateKzgProof .
+go test -fuzz=FuzzBlobToKZGCommitment
 ```
 ```
-go test -fuzz=FuzzVerifyAggregateKzgProof .
+go test -fuzz=FuzzComputeKZGProof
 ```
 ```
-go test -fuzz=FuzzBlobToKzgCommitment .
+go test -fuzz=FuzzComputeBlobKZGProof
 ```
 ```
-go test -fuzz=FuzzVerifyKzgProof .
+go test -fuzz=FuzzVerifyKZGProof
+```
+```
+go test -fuzz=FuzzVerifyBlobKZGProof
+```
+```
+go test -fuzz=FuzzVerifyBlobKZGProofBatch
 ```
 
 ### Problems you may encounter
@@ -58,7 +49,7 @@ If you encounter an issue like this:
 warning: starting with empty corpus
 fuzz: elapsed: 0s, execs: 0 (0/sec), new interesting: 0 (total: 0)
 fuzz: elapsed: 1s, execs: 0 (0/sec), new interesting: 0 (total: 0)
---- FAIL: FuzzVerifyAggregateKzgProof (1.21s)
+--- FAIL: FuzzVerifyBlobKZGProof (1.21s)
     open /dev/null: too many open files
 FAIL
 exit status 1

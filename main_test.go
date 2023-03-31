@@ -33,7 +33,7 @@ func TestMain(m *testing.M) {
 // Differential Fuzzing Functions
 ///////////////////////////////////////////////////////////////////////////////
 
-func FuzzBlobToKzgCommitment(f *testing.F) {
+func FuzzBlobToKZGCommitment(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
 		tp, err := GetTypeProvider(data)
 		if err != nil {
@@ -54,7 +54,7 @@ func FuzzBlobToKzgCommitment(f *testing.F) {
 	})
 }
 
-func FuzzComputeKzgProof(f *testing.F) {
+func FuzzComputeKZGProof(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
 		tp, err := GetTypeProvider(data)
 		if err != nil {
@@ -80,7 +80,7 @@ func FuzzComputeKzgProof(f *testing.F) {
 	})
 }
 
-func FuzzComputeBlobKzgProof(f *testing.F) {
+func FuzzComputeBlobKZGProof(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
 		tp, err := GetTypeProvider(data)
 		if err != nil {
@@ -105,7 +105,7 @@ func FuzzComputeBlobKzgProof(f *testing.F) {
 	})
 }
 
-func FuzzVerifyKzgProof(f *testing.F) {
+func FuzzVerifyKZGProof(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
 		tp, err := GetTypeProvider(data)
 		if err != nil {
@@ -176,7 +176,7 @@ func FuzzVerifyKzgProof(f *testing.F) {
 	})
 }
 
-func FuzzVerifyBlobKzgProof(f *testing.F) {
+func FuzzVerifyBlobKZGProof(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
 		tp, err := GetTypeProvider(data)
 		if err != nil {
@@ -228,7 +228,7 @@ func FuzzVerifyBlobKzgProof(f *testing.F) {
 	})
 }
 
-func FuzzVerifyBlobKzgProofBatch(f *testing.F) {
+func FuzzVerifyBlobKZGProofBatch(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
 		tp, err := GetTypeProvider(data)
 		if err != nil {
