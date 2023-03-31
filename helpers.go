@@ -3,9 +3,10 @@ package fuzz
 import (
 	"math/rand"
 
+	gokzgApi "github.com/crate-crypto/go-proto-danksharding-crypto/api"
+	gokzg "github.com/crate-crypto/go-proto-danksharding-crypto/serialization"
 	ckzg "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/holiman/uint256"
-	gokzg "github.com/protolambda/go-kzg/eth"
 	fuzzutils "github.com/trailofbits/go-fuzz-utils"
 )
 
@@ -38,7 +39,7 @@ func GetRandFieldElement(tp *fuzzutils.TypeProvider) (ckzg.Bytes32, [32]byte, bo
 	} else {
 		// Provide a valid/canonical field element.
 		var BlsModulus = new(uint256.Int)
-		BlsModulus.SetFromBig(gokzg.BLSModulus)
+		BlsModulus.SetBytes(gokzgApi.MODULUS[:])
 		field := new(uint256.Int).SetBytes(fieldElementBytes[:])
 		field = field.Mod(field, BlsModulus)
 		canonicalFieldElementBytes := field.Bytes32()
@@ -61,7 +62,7 @@ func GetRandCanonicalFieldElement(tp *fuzzutils.TypeProvider) (ckzg.Bytes32, [32
 		return ckzg.Bytes32{}, [32]byte{}, false
 	}
 	var BlsModulus = new(uint256.Int)
-	BlsModulus.SetFromBig(gokzg.BLSModulus)
+	BlsModulus.SetBytes(gokzgApi.MODULUS[:])
 	field := new(uint256.Int).SetBytes(fieldElementBytes[:])
 	field = field.Mod(field, BlsModulus)
 	canonicalFieldElementBytes := field.Bytes32()
@@ -71,10 +72,10 @@ func GetRandCanonicalFieldElement(tp *fuzzutils.TypeProvider) (ckzg.Bytes32, [32
 	return cKzgFieldElement, canonicalFieldElementBytes, true
 }
 
-func GetRandBlob(tp *fuzzutils.TypeProvider) (ckzg.Blob, GoKzgBlobImpl, bool) {
+func GetRandBlob(tp *fuzzutils.TypeProvider) (ckzg.Blob, gokzg.Blob, bool) {
 	seed, err := tp.GetInt64()
 	if err != nil {
-		return ckzg.Blob{}, GoKzgBlobImpl{}, false
+		return ckzg.Blob{}, gokzg.Blob{}, false
 	}
 	rand.Seed(seed)
 
@@ -83,22 +84,26 @@ func GetRandBlob(tp *fuzzutils.TypeProvider) (ckzg.Blob, GoKzgBlobImpl, bool) {
 		randomBytes := make([]byte, ckzg.BytesPerBlob)
 		_, err = rand.Read(randomBytes)
 		if err != nil {
-			return ckzg.Blob{}, GoKzgBlobImpl{}, false
+			return ckzg.Blob{}, gokzg.Blob{}, false
 		}
-		var blob ckzg.Blob
-		copy(blob[:], randomBytes)
-		return blob, randomBytes, true
+		var cKzgBlob ckzg.Blob
+		copy(cKzgBlob[:], randomBytes)
+		var goKzgBlob gokzg.Blob
+		copy(goKzgBlob[:], randomBytes)
+		return cKzgBlob, goKzgBlob, true
 	} else {
 		// Provide a valid/canonical blob.
-		var blob ckzg.Blob
+		var cKzgBlob ckzg.Blob
+		var goKzgBlob gokzg.Blob
 		for i := 0; i < ckzg.BytesPerBlob; i += ckzg.BytesPerFieldElement {
 			_, canonicalFieldElementBytes, ok := GetRandCanonicalFieldElement(tp)
 			if !ok {
-				return ckzg.Blob{}, GoKzgBlobImpl{}, false
+				return ckzg.Blob{}, gokzg.Blob{}, false
 			}
-			copy(blob[i:i+ckzg.BytesPerFieldElement], canonicalFieldElementBytes[:])
+			copy(cKzgBlob[i:i+ckzg.BytesPerFieldElement], canonicalFieldElementBytes[:])
+			copy(goKzgBlob[i:i+ckzg.BytesPerFieldElement], canonicalFieldElementBytes[:])
 		}
-		return blob, blob[:], true
+		return cKzgBlob, goKzgBlob, true
 	}
 }
 
@@ -123,8 +128,8 @@ func GetRandG1(tp *fuzzutils.TypeProvider) ([]byte, bool) {
 		if ok != false {
 			return []byte{}, false
 		}
-		commitment, ret := ckzg.BlobToKZGCommitment(blob)
-		if ret != ckzg.C_KZG_OK {
+		commitment, err := ckzg.BlobToKZGCommitment(blob)
+		if err != nil {
 			return []byte{}, false
 		}
 		return commitment[:], true
