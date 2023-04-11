@@ -5,8 +5,7 @@ import (
 	"os"
 	"testing"
 
-	gokzg "github.com/crate-crypto/go-proto-danksharding-crypto/api"
-	"github.com/crate-crypto/go-proto-danksharding-crypto/serialization"
+	gokzg "github.com/crate-crypto/go-kzg-4844"
 	ckzg "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/stretchr/testify/require"
 )
@@ -165,7 +164,7 @@ func FuzzVerifyKZGProof(f *testing.F) {
 		}
 
 		cKzgResult, cKzgErr := ckzg.VerifyKZGProof(cKzgCommitment, cKzgZ, cKzgY, cKzgProof)
-		goKzgErr := gokzgCtx.VerifyKZGProof(goKzgCommitment, goKzgProof, goKzgZ, goKzgY)
+		goKzgErr := gokzgCtx.VerifyKZGProof(goKzgCommitment, goKzgZ, goKzgY, goKzgProof)
 		goKzgResult := err == nil
 
 		t.Logf("go-kzg error: %v\n", err)
@@ -245,17 +244,17 @@ func FuzzVerifyBlobKZGProofBatch(f *testing.F) {
 		cKzgBlobs := make([]ckzg.Blob, count)
 		cKzgCommitments := make([]ckzg.Bytes48, count)
 		cKzgProofs := make([]ckzg.Bytes48, count)
-		goKzgBlobs := make([]serialization.Blob, count)
-		goKzgCommitments := make([]serialization.KZGCommitment, count)
-		goKzgProofs := make([]serialization.KZGProof, count)
+		goKzgBlobs := make([]gokzg.Blob, count)
+		goKzgCommitments := make([]gokzg.KZGCommitment, count)
+		goKzgProofs := make([]gokzg.KZGProof, count)
 
 		for i := 0; i < int(count); i++ {
 			var cKzgBlob ckzg.Blob
 			var cKzgCommitment ckzg.Bytes48
 			var cKzgProof ckzg.Bytes48
-			var goKzgBlob serialization.Blob
-			var goKzgCommitment serialization.KZGCommitment
-			var goKzgProof serialization.KZGProof
+			var goKzgBlob gokzg.Blob
+			var goKzgCommitment gokzg.KZGCommitment
+			var goKzgProof gokzg.KZGProof
 
 			completelyRandom, err := tp.GetBool()
 			if err != nil {

@@ -3,8 +3,7 @@ package fuzz
 import (
 	"math/rand"
 
-	gokzgApi "github.com/crate-crypto/go-proto-danksharding-crypto/api"
-	gokzg "github.com/crate-crypto/go-proto-danksharding-crypto/serialization"
+	gokzg "github.com/crate-crypto/go-kzg-4844"
 	ckzg "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/holiman/uint256"
 	fuzzutils "github.com/trailofbits/go-fuzz-utils"
@@ -39,7 +38,7 @@ func GetRandFieldElement(tp *fuzzutils.TypeProvider) (ckzg.Bytes32, [32]byte, bo
 	} else {
 		// Provide a valid/canonical field element.
 		var BlsModulus = new(uint256.Int)
-		BlsModulus.SetBytes(gokzgApi.MODULUS[:])
+		BlsModulus.SetBytes(gokzg.BlsModulus[:])
 		field := new(uint256.Int).SetBytes(fieldElementBytes[:])
 		field = field.Mod(field, BlsModulus)
 		canonicalFieldElementBytes := field.Bytes32()
@@ -62,7 +61,7 @@ func GetRandCanonicalFieldElement(tp *fuzzutils.TypeProvider) (ckzg.Bytes32, [32
 		return ckzg.Bytes32{}, [32]byte{}, false
 	}
 	var BlsModulus = new(uint256.Int)
-	BlsModulus.SetBytes(gokzgApi.MODULUS[:])
+	BlsModulus.SetBytes(gokzg.BlsModulus[:])
 	field := new(uint256.Int).SetBytes(fieldElementBytes[:])
 	field = field.Mod(field, BlsModulus)
 	canonicalFieldElementBytes := field.Bytes32()

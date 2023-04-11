@@ -1,10 +1,10 @@
 # KZG Fuzz
 
 This repository has functions that fuzz the exported functions in
-[C-KZG-4844](https://github.com/ethereum/c-kzg-4844) (c-kzg) and
-[go-proto-danksharing-crypto](https://github.com/crate-crypto/go-proto-danksharding-crypto)
-(go-kzg). For several of these functions, we compare implementation results
-given the same inputs; we expect these to be the same.
+[c-kzg-4844](https://github.com/ethereum/c-kzg-4844) (c-kzg) and
+[go-kzg-4844](https://github.com/crate-crypto/go-kzg-4844) (go-kzg). For several
+of these functions, we compare implementation results given the same inputs; we
+expect these to be the same.
 
 ## Fuzzing
 
