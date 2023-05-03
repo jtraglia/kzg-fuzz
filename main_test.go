@@ -44,7 +44,7 @@ func FuzzBlobToKZGCommitment(f *testing.F) {
 		}
 
 		cKzgCommitment, cKzgErr := ckzg.BlobToKZGCommitment(cKzgBlob)
-		goKzgCommitment, goKzgErr := gokzgCtx.BlobToKZGCommitment(goKzgBlob)
+		goKzgCommitment, goKzgErr := gokzgCtx.BlobToKZGCommitment(goKzgBlob, 1)
 
 		require.Equal(t, cKzgErr == nil, goKzgErr == nil)
 		if cKzgErr == nil && goKzgErr == nil {
@@ -69,7 +69,7 @@ func FuzzComputeKZGProof(f *testing.F) {
 		}
 
 		cKzgProof, cKzgY, cKzgErr := ckzg.ComputeKZGProof(cKzgBlob, cKzgZ)
-		goKzgProof, goKzgY, goKzgErr := gokzgCtx.ComputeKZGProof(goKzgBlob, goKzgZ)
+		goKzgProof, goKzgY, goKzgErr := gokzgCtx.ComputeKZGProof(goKzgBlob, goKzgZ, 1)
 
 		require.Equal(t, cKzgErr == nil, goKzgErr == nil)
 		if cKzgErr == nil && goKzgErr == nil {
@@ -95,7 +95,7 @@ func FuzzComputeBlobKZGProof(f *testing.F) {
 		}
 
 		cKzgProof, cKzgErr := ckzg.ComputeBlobKZGProof(cKzgBlob, cKzgCommitment)
-		goKzgProof, goKzgErr := gokzgCtx.ComputeBlobKZGProof(goKzgBlob, goKzgCommitment)
+		goKzgProof, goKzgErr := gokzgCtx.ComputeBlobKZGProof(goKzgBlob, goKzgCommitment, 1)
 
 		require.Equal(t, cKzgErr == nil, goKzgErr == nil)
 		if cKzgErr == nil && goKzgErr == nil {
@@ -144,7 +144,7 @@ func FuzzVerifyKZGProof(f *testing.F) {
 
 			// Generate a KZGCommitment to that blob
 			cKzgCommitmentTrusted, cKzgErr := ckzg.BlobToKZGCommitment(cKzgBlob)
-			goKzgCommitment, goKzgErr = gokzgCtx.BlobToKZGCommitment(goKzgBlob)
+			goKzgCommitment, goKzgErr = gokzgCtx.BlobToKZGCommitment(goKzgBlob, 1)
 			require.Equal(t, cKzgErr == nil, goKzgErr == nil)
 			if cKzgErr == nil && goKzgErr == nil {
 				require.Equal(t, cKzgCommitment[:], goKzgCommitment[:])
@@ -152,7 +152,7 @@ func FuzzVerifyKZGProof(f *testing.F) {
 
 			// Generate a KZGProof to that blob/point
 			cKzgProofTrusted, cKzgY, cKzgErr = ckzg.ComputeKZGProof(cKzgBlob, cKzgZ)
-			goKzgProof, goKzgY, goKzgErr = gokzgCtx.ComputeKZGProof(goKzgBlob, goKzgZ)
+			goKzgProof, goKzgY, goKzgErr = gokzgCtx.ComputeKZGProof(goKzgBlob, goKzgZ, 1)
 			require.Equal(t, cKzgErr == nil, goKzgErr == nil)
 			if cKzgErr == nil && goKzgErr == nil {
 				require.Equal(t, cKzgProof[:], goKzgProof[:])
@@ -205,7 +205,7 @@ func FuzzVerifyBlobKZGProof(f *testing.F) {
 
 			// Generate a KZGProof to that blob/commitment
 			cKzgProofTrusted, cKzgErr = ckzg.ComputeBlobKZGProof(cKzgBlob, cKzgCommitment)
-			goKzgProof, goKzgErr = gokzgCtx.ComputeBlobKZGProof(goKzgBlob, goKzgCommitment)
+			goKzgProof, goKzgErr = gokzgCtx.ComputeBlobKZGProof(goKzgBlob, goKzgCommitment, 1)
 			require.Equal(t, cKzgErr == nil, goKzgErr == nil)
 			if cKzgErr == nil && goKzgErr == nil {
 				require.Equal(t, cKzgProof[:], goKzgProof[:])
@@ -281,7 +281,7 @@ func FuzzVerifyBlobKZGProofBatch(f *testing.F) {
 
 				// Generate a KZGProof to that blob/commitment
 				cKzgProofTrusted, cKzgErr = ckzg.ComputeBlobKZGProof(cKzgBlob, cKzgCommitment)
-				goKzgProof, goKzgErr = gokzgCtx.ComputeBlobKZGProof(goKzgBlob, goKzgCommitment)
+				goKzgProof, goKzgErr = gokzgCtx.ComputeBlobKZGProof(goKzgBlob, goKzgCommitment, 1)
 				require.Equal(t, cKzgErr == nil, goKzgErr == nil)
 				if cKzgErr == nil && goKzgErr == nil {
 					require.Equal(t, cKzgProof[:], goKzgProof[:])

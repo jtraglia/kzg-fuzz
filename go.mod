@@ -3,7 +3,7 @@ module fuzz
 go 1.19
 
 require (
-	github.com/crate-crypto/go-kzg-4844 v0.0.1
+	github.com/crate-crypto/go-kzg-4844 v0.2.0
 	github.com/ethereum/c-kzg-4844 v0.0.0-20230410204534-fd24cf8e1e2f
 	github.com/holiman/uint256 v1.2.1
 	github.com/protolambda/go-kzg v0.0.0-20221224134646-c91cee5e954e
