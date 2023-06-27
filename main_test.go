@@ -33,12 +33,8 @@ func TestMain(m *testing.M) {
 ///////////////////////////////////////////////////////////////////////////////
 
 func FuzzBlobToKZGCommitment(f *testing.F) {
-	f.Fuzz(func(t *testing.T, data []byte) {
-		tp, err := GetTypeProvider(data)
-		if err != nil {
-			t.SkipNow()
-		}
-		cKzgBlob, goKzgBlob, ok := GetRandBlob(tp)
+	f.Fuzz(func(t *testing.T, seed int64) {
+		cKzgBlob, goKzgBlob, ok := GetRandBlob(t, seed)
 		if !ok {
 			t.SkipNow()
 		}
@@ -54,16 +50,12 @@ func FuzzBlobToKZGCommitment(f *testing.F) {
 }
 
 func FuzzComputeKZGProof(f *testing.F) {
-	f.Fuzz(func(t *testing.T, data []byte) {
-		tp, err := GetTypeProvider(data)
-		if err != nil {
-			t.SkipNow()
-		}
-		cKzgBlob, goKzgBlob, ok := GetRandBlob(tp)
+	f.Fuzz(func(t *testing.T, seed int64) {
+		cKzgBlob, goKzgBlob, ok := GetRandBlob(t, seed)
 		if !ok {
 			t.SkipNow()
 		}
-		cKzgZ, goKzgZ, ok := GetRandFieldElement(tp)
+		cKzgZ, goKzgZ, ok := GetRandFieldElement(t, seed)
 		if !ok {
 			t.SkipNow()
 		}
@@ -80,16 +72,12 @@ func FuzzComputeKZGProof(f *testing.F) {
 }
 
 func FuzzComputeBlobKZGProof(f *testing.F) {
-	f.Fuzz(func(t *testing.T, data []byte) {
-		tp, err := GetTypeProvider(data)
-		if err != nil {
-			t.SkipNow()
-		}
-		cKzgBlob, goKzgBlob, ok := GetRandBlob(tp)
+	f.Fuzz(func(t *testing.T, seed int64) {
+		cKzgBlob, goKzgBlob, ok := GetRandBlob(t, seed)
 		if !ok {
 			t.SkipNow()
 		}
-		cKzgCommitment, goKzgCommitment, ok := GetRandCommitment(tp)
+		cKzgCommitment, goKzgCommitment, ok := GetRandCommitment(t, seed)
 		if !ok {
 			t.SkipNow()
 		}
@@ -105,45 +93,38 @@ func FuzzComputeBlobKZGProof(f *testing.F) {
 }
 
 func FuzzVerifyKZGProof(f *testing.F) {
-	f.Fuzz(func(t *testing.T, data []byte) {
-		tp, err := GetTypeProvider(data)
-		if err != nil {
-			t.SkipNow()
-		}
-		cKzgCommitment, goKzgCommitment, ok := GetRandCommitment(tp)
+	f.Fuzz(func(t *testing.T, seed int64) {
+		cKzgCommitment, goKzgCommitment, ok := GetRandCommitment(t, seed)
 		if !ok {
 			t.SkipNow()
 		}
-		cKzgZ, goKzgZ, ok := GetRandFieldElement(tp)
+		cKzgZ, goKzgZ, ok := GetRandFieldElement(t, seed)
 		if !ok {
 			t.SkipNow()
 		}
-		cKzgY, goKzgY, ok := GetRandFieldElement(tp)
+		cKzgY, goKzgY, ok := GetRandFieldElement(t, seed)
 		if !ok {
 			t.SkipNow()
 		}
-		cKzgProof, goKzgProof, ok := GetRandProof(tp)
+		cKzgProof, goKzgProof, ok := GetRandProof(t, seed)
 		if !ok {
 			t.SkipNow()
 		}
-		seed, err := tp.GetInt64()
-		if err != nil {
-			t.SkipNow()
-		}
-		rand.Seed(seed)
 
+		rand.Seed(seed)
 		if seed%2 == 0 {
 			var cKzgErr, goKzgErr error
 			var cKzgProofTrusted ckzg.KZGProof
 
 			// Generate a blob that'll be used to make a commitment/proof
-			cKzgBlob, goKzgBlob, ok := GetRandBlob(tp)
+			cKzgBlob, goKzgBlob, ok := GetRandBlob(t, seed)
 			if !ok {
 				t.SkipNow()
 			}
 
 			// Generate a KZGCommitment to that blob
 			cKzgCommitmentTrusted, cKzgErr := ckzg.BlobToKZGCommitment(cKzgBlob)
+			cKzgCommitment = ckzg.Bytes48(cKzgCommitmentTrusted)
 			goKzgCommitment, goKzgErr = gokzgCtx.BlobToKZGCommitment(goKzgBlob, 1)
 			require.Equal(t, cKzgErr == nil, goKzgErr == nil)
 			if cKzgErr == nil && goKzgErr == nil {
@@ -152,22 +133,19 @@ func FuzzVerifyKZGProof(f *testing.F) {
 
 			// Generate a KZGProof to that blob/point
 			cKzgProofTrusted, cKzgY, cKzgErr = ckzg.ComputeKZGProof(cKzgBlob, cKzgZ)
+			cKzgProof = ckzg.Bytes48(cKzgProofTrusted)
 			goKzgProof, goKzgY, goKzgErr = gokzgCtx.ComputeKZGProof(goKzgBlob, goKzgZ, 1)
 			require.Equal(t, cKzgErr == nil, goKzgErr == nil)
 			if cKzgErr == nil && goKzgErr == nil {
 				require.Equal(t, cKzgProof[:], goKzgProof[:])
 			}
-
-			// Convert KZGCommitment/KZGProof to untrusted Bytes48s
-			cKzgCommitment = ckzg.Bytes48(cKzgCommitmentTrusted)
-			cKzgProof = ckzg.Bytes48(cKzgProofTrusted)
 		}
 
 		cKzgResult, cKzgErr := ckzg.VerifyKZGProof(cKzgCommitment, cKzgZ, cKzgY, cKzgProof)
 		goKzgErr := gokzgCtx.VerifyKZGProof(goKzgCommitment, goKzgZ, goKzgY, goKzgProof)
-		goKzgResult := err == nil
+		goKzgResult := goKzgErr == nil
 
-		t.Logf("go-kzg error: %v\n", err)
+		t.Logf("go-kzg error: %v\n", cKzgErr)
 		require.Equal(t, cKzgErr == nil, goKzgErr == nil)
 		if cKzgErr == nil && goKzgErr == nil {
 			require.Equal(t, cKzgResult, goKzgResult)
@@ -176,50 +154,39 @@ func FuzzVerifyKZGProof(f *testing.F) {
 }
 
 func FuzzVerifyBlobKZGProof(f *testing.F) {
-	f.Fuzz(func(t *testing.T, data []byte) {
-		tp, err := GetTypeProvider(data)
-		if err != nil {
-			t.SkipNow()
-		}
-		cKzgBlob, goKzgBlob, ok := GetRandBlob(tp)
+	f.Fuzz(func(t *testing.T, seed int64) {
+		cKzgBlob, goKzgBlob, ok := GetRandBlob(t, seed)
 		if !ok {
 			t.SkipNow()
 		}
-		cKzgCommitment, goKzgCommitment, ok := GetRandCommitment(tp)
+		cKzgCommitment, goKzgCommitment, ok := GetRandCommitment(t, seed)
 		if !ok {
 			t.SkipNow()
 		}
-		cKzgProof, goKzgProof, ok := GetRandProof(tp)
+		cKzgProof, goKzgProof, ok := GetRandProof(t, seed)
 		if !ok {
-			t.SkipNow()
-		}
-		seed, err := tp.GetInt64()
-		if err != nil {
 			t.SkipNow()
 		}
 
-		rand.Seed(seed)
 		if seed%2 == 0 {
 			var cKzgErr, goKzgErr error
 			var cKzgProofTrusted ckzg.KZGProof
 
 			// Generate a KZGProof to that blob/commitment
 			cKzgProofTrusted, cKzgErr = ckzg.ComputeBlobKZGProof(cKzgBlob, cKzgCommitment)
+			cKzgProof = ckzg.Bytes48(cKzgProofTrusted)
 			goKzgProof, goKzgErr = gokzgCtx.ComputeBlobKZGProof(goKzgBlob, goKzgCommitment, 1)
 			require.Equal(t, cKzgErr == nil, goKzgErr == nil)
 			if cKzgErr == nil && goKzgErr == nil {
 				require.Equal(t, cKzgProof[:], goKzgProof[:])
 			}
-
-			// Convert the KZGProof to an untrusted Bytes48
-			cKzgProof = ckzg.Bytes48(cKzgProofTrusted)
 		}
 
 		cKzgResult, cKzgErr := ckzg.VerifyBlobKZGProof(cKzgBlob, cKzgCommitment, cKzgProof)
 		goKzgErr := gokzgCtx.VerifyBlobKZGProof(goKzgBlob, goKzgCommitment, goKzgProof)
-		goKzgResult := err == nil
+		goKzgResult := goKzgErr == nil
 
-		t.Logf("go-kzg error: %v\n", err)
+		t.Logf("go-kzg error: %v\n", cKzgErr)
 		require.Equal(t, cKzgErr == nil, goKzgErr == nil)
 		if cKzgErr == nil && goKzgErr == nil {
 			require.Equal(t, cKzgResult, goKzgResult)
@@ -228,18 +195,10 @@ func FuzzVerifyBlobKZGProof(f *testing.F) {
 }
 
 func FuzzVerifyBlobKZGProofBatch(f *testing.F) {
-	f.Fuzz(func(t *testing.T, data []byte) {
-		tp, err := GetTypeProvider(data)
-		if err != nil {
-			t.SkipNow()
-		}
-		count, err := tp.GetUint()
-		if err != nil {
-			t.SkipNow()
-		}
+	f.Fuzz(func(t *testing.T, seed int64) {
 
 		// Between 1 and 5, inclusive
-		count = (count % 5) + 1
+		count := (rand.Uint64() % 5) + 1
 
 		cKzgBlobs := make([]ckzg.Blob, count)
 		cKzgCommitments := make([]ckzg.Bytes48, count)
@@ -256,22 +215,18 @@ func FuzzVerifyBlobKZGProofBatch(f *testing.F) {
 			var goKzgCommitment gokzg.KZGCommitment
 			var goKzgProof gokzg.KZGProof
 
-			completelyRandom, err := tp.GetBool()
-			if err != nil {
-				t.SkipNow()
-			}
-
+			completelyRandom := rand.Intn(2) != 0
 			if completelyRandom {
 				var ok bool
-				cKzgBlob, goKzgBlob, ok = GetRandBlob(tp)
+				cKzgBlob, goKzgBlob, ok = GetRandBlob(t, seed)
 				if !ok {
 					t.SkipNow()
 				}
-				cKzgCommitment, goKzgCommitment, ok = GetRandCommitment(tp)
+				cKzgCommitment, goKzgCommitment, ok = GetRandCommitment(t, seed)
 				if !ok {
 					t.SkipNow()
 				}
-				cKzgProof, goKzgProof, ok = GetRandProof(tp)
+				cKzgProof, goKzgProof, ok = GetRandProof(t, seed)
 				if !ok {
 					t.SkipNow()
 				}
@@ -281,14 +236,12 @@ func FuzzVerifyBlobKZGProofBatch(f *testing.F) {
 
 				// Generate a KZGProof to that blob/commitment
 				cKzgProofTrusted, cKzgErr = ckzg.ComputeBlobKZGProof(cKzgBlob, cKzgCommitment)
+				cKzgProof = ckzg.Bytes48(cKzgProofTrusted)
 				goKzgProof, goKzgErr = gokzgCtx.ComputeBlobKZGProof(goKzgBlob, goKzgCommitment, 1)
 				require.Equal(t, cKzgErr == nil, goKzgErr == nil)
 				if cKzgErr == nil && goKzgErr == nil {
 					require.Equal(t, cKzgProof[:], goKzgProof[:])
 				}
-
-				// Convert the KZGProof to an untrusted Bytes48
-				cKzgProof = ckzg.Bytes48(cKzgProofTrusted)
 			}
 
 			cKzgBlobs[i] = cKzgBlob
@@ -302,9 +255,9 @@ func FuzzVerifyBlobKZGProofBatch(f *testing.F) {
 
 		cKzgResult, cKzgErr := ckzg.VerifyBlobKZGProofBatch(cKzgBlobs, cKzgCommitments, cKzgProofs)
 		goKzgErr := gokzgCtx.VerifyBlobKZGProofBatch(goKzgBlobs, goKzgCommitments, goKzgProofs)
-		goKzgResult := err == nil
+		goKzgResult := goKzgErr == nil
 
-		t.Logf("go-kzg error: %v\n", err)
+		t.Logf("go-kzg error: %v\n", cKzgErr)
 		require.Equal(t, cKzgErr == nil, goKzgErr == nil)
 		if cKzgErr == nil && goKzgErr == nil {
 			require.Equal(t, cKzgResult, goKzgResult)

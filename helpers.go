@@ -2,11 +2,11 @@ package fuzz
 
 import (
 	"math/rand"
+	"testing"
 
 	gokzg "github.com/crate-crypto/go-kzg-4844"
 	ckzg "github.com/ethereum/c-kzg-4844/bindings/go"
 	"github.com/holiman/uint256"
-	fuzzutils "github.com/trailofbits/go-fuzz-utils"
 )
 
 type Action int64
@@ -16,14 +16,6 @@ const (
 	actionValid   Action = 1
 	actionMutated Action = 2
 )
-
-func GetTypeProvider(data []byte) (*fuzzutils.TypeProvider, error) {
-	tp, err := fuzzutils.NewTypeProvider(data)
-	if err != nil {
-		return nil, err
-	}
-	return tp, nil
-}
 
 func Mutate(data []byte, seed int64) []byte {
 	rand.Seed(seed)
@@ -37,15 +29,11 @@ func Mutate(data []byte, seed int64) []byte {
 	return data
 }
 
-func GetRandFieldElement(tp *fuzzutils.TypeProvider) (ckzg.Bytes32, [32]byte, bool) {
-	seed, err := tp.GetInt64()
-	if err != nil {
-		return ckzg.Bytes32{}, [32]byte{}, false
-	}
-
+func GetRandFieldElement(t *testing.T, seed int64) (ckzg.Bytes32, [32]byte, bool) {
+	t.Helper()
 	rand.Seed(seed)
 	fieldElementBytes := make([]byte, ckzg.BytesPerFieldElement)
-	_, err = rand.Read(fieldElementBytes)
+	_, err := rand.Read(fieldElementBytes)
 	if err != nil {
 		return ckzg.Bytes32{}, [32]byte{}, false
 	}
@@ -66,10 +54,7 @@ func GetRandFieldElement(tp *fuzzutils.TypeProvider) (ckzg.Bytes32, [32]byte, bo
 
 		// Mutate the data, which may make it invalid.
 		if action == actionMutated {
-			mutateSeed, err := tp.GetInt64()
-			if err != nil {
-				return ckzg.Bytes32{}, [32]byte{}, false
-			}
+			mutateSeed := rand.Int63()
 			mutated := Mutate(canonicalFieldElementBytes[:], mutateSeed)
 			copy(canonicalFieldElementBytes[:], mutated)
 		}
@@ -79,15 +64,11 @@ func GetRandFieldElement(tp *fuzzutils.TypeProvider) (ckzg.Bytes32, [32]byte, bo
 	}
 }
 
-func GetRandCanonicalFieldElement(tp *fuzzutils.TypeProvider) (ckzg.Bytes32, [32]byte, bool) {
-	seed, err := tp.GetInt64()
-	if err != nil {
-		return ckzg.Bytes32{}, [32]byte{}, false
-	}
-
+func GetRandCanonicalFieldElement(t *testing.T, seed int64) (ckzg.Bytes32, [32]byte, bool) {
+	t.Helper()
 	rand.Seed(seed)
 	fieldElementBytes := make([]byte, ckzg.BytesPerFieldElement)
-	_, err = rand.Read(fieldElementBytes)
+	_, err := rand.Read(fieldElementBytes)
 	if err != nil {
 		return ckzg.Bytes32{}, [32]byte{}, false
 	}
@@ -102,18 +83,15 @@ func GetRandCanonicalFieldElement(tp *fuzzutils.TypeProvider) (ckzg.Bytes32, [32
 	return cKzgFieldElement, canonicalFieldElementBytes, true
 }
 
-func GetRandBlob(tp *fuzzutils.TypeProvider) (ckzg.Blob, gokzg.Blob, bool) {
-	seed, err := tp.GetInt64()
-	if err != nil {
-		return ckzg.Blob{}, gokzg.Blob{}, false
-	}
+func GetRandBlob(t *testing.T, seed int64) (ckzg.Blob, gokzg.Blob, bool) {
+	t.Helper()
 	rand.Seed(seed)
 
 	action := Action(seed % 3)
 	if action == actionRandom {
 		// Provide a completely random blob.
 		randomBytes := make([]byte, ckzg.BytesPerBlob)
-		_, err = rand.Read(randomBytes)
+		_, err := rand.Read(randomBytes)
 		if err != nil {
 			return ckzg.Blob{}, gokzg.Blob{}, false
 		}
@@ -127,17 +105,15 @@ func GetRandBlob(tp *fuzzutils.TypeProvider) (ckzg.Blob, gokzg.Blob, bool) {
 		var cKzgBlob ckzg.Blob
 		var goKzgBlob gokzg.Blob
 		for i := 0; i < ckzg.BytesPerBlob; i += ckzg.BytesPerFieldElement {
-			_, canonicalFieldElementBytes, ok := GetRandCanonicalFieldElement(tp)
+			newSeed := rand.Int63()
+			_, canonicalFieldElementBytes, ok := GetRandCanonicalFieldElement(t, newSeed)
 			if !ok {
 				return ckzg.Blob{}, gokzg.Blob{}, false
 			}
 
 			// Mutate the data, which may make it invalid.
 			if action == actionMutated {
-				mutateSeed, err := tp.GetInt64()
-				if err != nil {
-					return ckzg.Blob{}, gokzg.Blob{}, false
-				}
+				mutateSeed := rand.Int63()
 				mutated := Mutate(canonicalFieldElementBytes[:], mutateSeed)
 				copy(canonicalFieldElementBytes[:], mutated)
 			}
@@ -149,25 +125,22 @@ func GetRandBlob(tp *fuzzutils.TypeProvider) (ckzg.Blob, gokzg.Blob, bool) {
 	}
 }
 
-func GetRandG1(tp *fuzzutils.TypeProvider) ([]byte, bool) {
-	seed, err := tp.GetInt64()
-	if err != nil {
-		return []byte{}, false
-	}
+func GetRandG1(t *testing.T, seed int64) ([]byte, bool) {
+	t.Helper()
 	rand.Seed(seed)
 
 	action := Action(seed % 3)
 	if action == actionRandom {
 		// Provide a completely random g1 point.
 		randomBytes := make([]byte, 48)
-		_, err = rand.Read(randomBytes)
+		_, err := rand.Read(randomBytes)
 		if err != nil {
 			return []byte{}, false
 		}
 		return randomBytes, true
 	} else {
 		// Provide a valid/canonical g1 point.
-		blob, _, ok := GetRandBlob(tp)
+		blob, _, ok := GetRandBlob(t, seed)
 		if ok != false {
 			return []byte{}, false
 		}
@@ -175,10 +148,7 @@ func GetRandG1(tp *fuzzutils.TypeProvider) ([]byte, bool) {
 
 		// Mutate the data, which may make it invalid.
 		if action == actionMutated {
-			mutateSeed, err := tp.GetInt64()
-			if err != nil {
-				return []byte{}, false
-			}
+			mutateSeed := rand.Int63()
 			mutated := Mutate(commitment[:], mutateSeed)
 			copy(commitment[:], mutated)
 		}
@@ -190,8 +160,9 @@ func GetRandG1(tp *fuzzutils.TypeProvider) ([]byte, bool) {
 	}
 }
 
-func GetRandCommitment(tp *fuzzutils.TypeProvider) (ckzg.Bytes48, gokzg.KZGCommitment, bool) {
-	commitmentBytes, ok := GetRandG1(tp)
+func GetRandCommitment(t *testing.T, seed int64) (ckzg.Bytes48, gokzg.KZGCommitment, bool) {
+	t.Helper()
+	commitmentBytes, ok := GetRandG1(t, seed)
 	if !ok {
 		return ckzg.Bytes48{}, gokzg.KZGCommitment{}, false
 	}
@@ -202,8 +173,9 @@ func GetRandCommitment(tp *fuzzutils.TypeProvider) (ckzg.Bytes48, gokzg.KZGCommi
 	return cKzgCommitment, goKzgCommitment, true
 }
 
-func GetRandProof(tp *fuzzutils.TypeProvider) (ckzg.Bytes48, gokzg.KZGProof, bool) {
-	proofBytes, ok := GetRandG1(tp)
+func GetRandProof(t *testing.T, seed int64) (ckzg.Bytes48, gokzg.KZGProof, bool) {
+	t.Helper()
+	proofBytes, ok := GetRandG1(t, seed)
 	if !ok {
 		return ckzg.Bytes48{}, gokzg.KZGProof{}, false
 	}

@@ -3,11 +3,10 @@ module fuzz
 go 1.19
 
 require (
-	github.com/crate-crypto/go-kzg-4844 v0.2.0
-	github.com/ethereum/c-kzg-4844 v0.0.0-20230410204534-fd24cf8e1e2f
+	github.com/crate-crypto/go-kzg-4844 v0.3.0
+	github.com/ethereum/c-kzg-4844 v0.3.0
 	github.com/holiman/uint256 v1.2.1
 	github.com/protolambda/go-kzg v0.0.0-20221224134646-c91cee5e954e
-	github.com/trailofbits/go-fuzz-utils v0.0.0-20210901195358-9657fcfd256c
 )
 
 require (
@@ -20,6 +19,7 @@ require (
 	github.com/supranational/blst v0.3.11-0.20230406105308-e9dfc5ee724b // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
