@@ -15,7 +15,8 @@ while true; do
       for func in $funcs; do
           echo "${bold}[+] fuzzing $func in $file for ${FUZZTIME}${normal}"
           parent=$(dirname $file)
-          CC=clang go test $parent -run=$func\$ -fuzz=$func\$ -fuzztime=${FUZZTIME}
+          CGO_CFLAGS="-O2 -D__BLST_PORTABLE__" CC=clang \
+              go test $parent -run=$func\$ -fuzz=$func\$ -fuzztime=${FUZZTIME}
       done
   done
 done
