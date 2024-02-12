@@ -17,7 +17,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic("Failed to load trusted setup")
 	}
-	gokzgCtx, err = gokzg.NewContext4096Insecure1337()
+	gokzgCtx, err = gokzg.NewContext4096Secure()
 	if err != nil {
 		panic("Failed to create context")
 	}
